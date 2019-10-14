@@ -22,6 +22,7 @@ PLAT_PATH		:=	plat/elvees/mcom03
 PLAT_INCLUDES		:=	-I$(PLAT_PATH)/include
 
 PLAT_BL_COMMON_SOURCES	+=	$(PLAT_PATH)/helpers.S			\
+				drivers/ti/uart/aarch64/16550_console.S \
 				drivers/delay_timer/delay_timer.c	\
 				drivers/delay_timer/generic_delay_timer.c \
 				${XLAT_TABLES_LIB_SRCS}

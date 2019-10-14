@@ -63,7 +63,10 @@ endfunc plat_is_my_cpu_primary
  * Clobber list : x0, x1, x2
  */
 func plat_crash_console_init
-	ret
+	mov_imm x0, PLAT_BOOT_UART_BASE
+	mov_imm x1, PLAT_BOOT_UART_CLK_IN_HZ
+	mov_imm x2, PLAT_CONSOLE_BAUDRATE
+	b	console_16550_core_init
 endfunc plat_crash_console_init
 
 /*
@@ -73,7 +76,8 @@ endfunc plat_crash_console_init
  * Clobber list : x1, x2
  */
 func plat_crash_console_putc
-	ret
+	mov_imm	x1, PLAT_BOOT_UART_BASE
+	b	console_16550_core_putc
 endfunc plat_crash_console_putc
 
 /*
@@ -84,5 +88,6 @@ endfunc plat_crash_console_putc
  * Clobber list : x0, x1
  */
 func plat_crash_console_flush
-	ret
+	mov_imm	x0, PLAT_BOOT_UART_BASE
+	b	console_16550_core_flush
 endfunc plat_crash_console_flush
