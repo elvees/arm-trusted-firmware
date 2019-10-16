@@ -41,6 +41,9 @@
 
 #define BL33_BASE			BL31_LIMIT
 
+/* TIMER related constants */
+#define PLAT_TIMER_CLK			10000000
+
 /* UART related constants */
 #define PLAT_BOOT_UART_BASE		0x1640000
 #define PLAT_BOOT_UART_CLK_IN_HZ	14750000

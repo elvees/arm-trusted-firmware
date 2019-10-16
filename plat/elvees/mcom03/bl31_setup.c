@@ -13,6 +13,7 @@
 #include <common/bl_common.h>
 #include <lib/xlat_tables/xlat_tables_v2.h>
 #include <drivers/ti/uart/uart_16550.h>
+#include <drivers/generic_delay_timer.h>
 
 #include <mcom03.h>
 
@@ -79,6 +80,7 @@ void bl31_early_platform_setup2(u_register_t arg0, u_register_t arg1,
 
 static void configure_sys_timer(void)
 {
+	generic_delay_timer_init();
 }
 
 void bl31_platform_setup(void)
@@ -105,5 +107,5 @@ void bl31_plat_arch_setup(void)
 
 unsigned int plat_get_syscnt_freq2(void)
 {
-	return 10000000;
+	return PLAT_TIMER_CLK;
 }

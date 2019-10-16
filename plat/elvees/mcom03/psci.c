@@ -12,7 +12,6 @@
 #include <arch_helpers.h>
 #include <common/debug.h>
 #include <drivers/delay_timer.h>
-#include <drivers/generic_delay_timer.h>
 #include <lib/psci/psci.h>
 
 #include <mcom03.h>
@@ -42,8 +41,6 @@ static void pwr_domain_off(const psci_power_state_t *target_state)
 
 static void __dead2 system_off(void)
 {
-	generic_delay_timer_init();
-
 	mdelay(1);
 
 	/* TODO handle gpio or another mechanism */
