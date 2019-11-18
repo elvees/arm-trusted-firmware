@@ -52,4 +52,10 @@
 #define PLAT_GICD_BASE			0x1100000
 #define PLAT_GICR_BASE			0x1180000
 
+#define PLAT_URB_BASE			0x1000000
+
+#define PPOLICY_OFF			0x1
+#define PPOLICY_WARM_RST		0x8
+#define PPOLICY_ON			0x10
+
 #endif /* PLATFORM_DEF_H */

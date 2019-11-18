@@ -26,22 +26,14 @@ func platform_mem_init
 endfunc platform_mem_init
 
 /*
- * Secondary CPUs are placed in a holding pen, waiting for their mailbox
- * to be populated. Note that all CPUs share the same mailbox ; therefore,
- * populating it will release all CPUs from their holding pen. If
- * finer-grained control is needed then this should be handled in the
- * code that secondary CPUs jump to.
+ * void __noreturn plat_secondary_cold_boot_setup(void);
  */
 func plat_secondary_cold_boot_setup
 	ldr	x0, plat_sec_entrypoint
-
-	/* Wait until the mailbox gets populated */
-poll_mailbox:
-	cbz	x0, 1f
+	cbz	x0, err_ret
 	br	x0
-1:
-	wfe
-	b	poll_mailbox
+err_ret:
+	ret
 endfunc plat_secondary_cold_boot_setup
 
 /*

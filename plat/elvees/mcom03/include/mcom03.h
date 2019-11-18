@@ -8,8 +8,34 @@
 #define MCOM03_H
 
 #include <stdint.h>
+#include <cdefs.h>
+#include <platform_def.h>
 
+#include <plat/common/platform.h>
 #include <lib/xlat_tables/xlat_tables_v2.h>
+#include <lib/mmio.h>
+
+#define CPU_PPOLICY_REG(core) (PLAT_URB_BASE + (core) * 16)
+#define CPU_PSTATUS_REG(core) (PLAT_URB_BASE + (core) * 16 + 4)
+
+#define SYS_PPOLICY_REG CPU_PPOLICY_REG(PLATFORM_CORE_COUNT)
+#define SYS_PSTATUS_REG CPU_PSTATUS_REG(PLATFORM_CORE_COUNT)
+
+#define CPU_PPOLICY_SET(core, val) \
+	mmio_write_32(CPU_PPOLICY_REG(core), val)
+
+#define CPU_PPOLICY_GET(core) \
+	mmio_read_32(CPU_PPOLICY_REG(core))
+
+#define CPU_PSTATUS_GET(core) \
+	mmio_read_32(CPU_PSTATUS_REG(core))
+
+#define SYS_PPOLICY_SET(val) \
+	mmio_write_32(SYS_PPOLICY_REG, val)
+#define SYS_PPOLICY_GET() \
+	mmio_read_32(SYS_PPOLICY_REG)
+#define SYS_PSTATUS_GET() \
+	mmio_read_32(SYS_PSTATUS_REG)
 
 void mcom03_gic_driver_init(void);
 void mcom03_gic_init(void);
