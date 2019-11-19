@@ -40,13 +40,6 @@ void mcom03_mmap_setup(uintptr_t total_base, size_t total_size,
 			round_up(BL_RO_DATA_END, PAGE_SIZE) - BL_RO_DATA_BASE,
 			MT_RO_DATA | MT_SECURE);
 
-	/* remap the coherent memory region */
-	VERBOSE("Coherent region: %p - %p\n",
-		(void *)BL_COHERENT_RAM_BASE, (void *)BL_COHERENT_RAM_END);
-	mmap_add_region(BL_COHERENT_RAM_BASE, BL_COHERENT_RAM_BASE,
-			BL_COHERENT_RAM_END - BL_COHERENT_RAM_BASE,
-			MT_DEVICE | MT_RW | MT_SECURE);
-
 	/* register regions */
 	mmap_add_region(PLAT_REG_REGION_BASE, PLAT_REG_REGION_BASE,
 			PLAT_REG_REGION_SIZE, MT_DEVICE | MT_RW | MT_NS);
