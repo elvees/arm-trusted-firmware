@@ -39,3 +39,8 @@ BL31_SOURCES		+=	drivers/arm/gic/common/gic_common.c	\
 				$(PLAT_PATH)/psci.c			\
 				$(PLAT_PATH)/gicv3.c			\
 				$(PLAT_PATH)/xlat_setup.c
+
+ifeq (${PLAT_MCOM03_HAPS},1)
+	CFLAGS += -DPLAT_MCOM03_HAPS
+	ASFLAGS += -DPLAT_MCOM03_HAPS
+endif

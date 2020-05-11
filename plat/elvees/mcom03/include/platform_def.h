@@ -42,7 +42,11 @@
 #define BL33_BASE			BL31_LIMIT
 
 /* TIMER related constants */
-#define PLAT_TIMER_CLK			10000000
+#ifdef PLAT_MCOM03_HAPS
+#define PLAT_TIMER_CLK			5000000
+#else
+#define PLAT_TIMER_CLK			27456000
+#endif
 
 /* UART related constants */
 #define PLAT_BOOT_UART_BASE		0x1640000
