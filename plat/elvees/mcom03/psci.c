@@ -12,6 +12,7 @@
 #include <arch_helpers.h>
 #include <common/debug.h>
 #include <drivers/delay_timer.h>
+#include <drivers/synopsys/dw_wdt.h>
 #include <lib/psci/psci.h>
 
 #include <plat_private.h>
@@ -48,6 +49,63 @@ static void pwr_domain_on_finish(const psci_power_state_t *target_state)
 
 	/* Enable the gic cpu interface */
 	mcom03_gic_cpuif_enable();
+}
+
+static int get_pll_freq(uintptr_t pll_cfg)
+{
+	int nr, nf, od;
+	uint32_t pll;
+
+	pll = mmio_read_32(pll_cfg);
+	if (!(pll & PLL_CFG_LOCK))
+		WARN("PLL is not locked\n");
+
+	if (pll & PLL_CFG_MAN) {
+		nr = (pll & PLL_CFG_NR) >> 27;
+		nf = (pll & PLL_CFG_NF) >> 14;
+		od = (pll & PLL_CFG_OD) >> 10;
+		return XTI_CLOCK * (nf + 1) / (nr + 1) / (od + 1);
+	} else
+		return XTI_CLOCK * ((pll & PLL_CFG_SEL) + 1);
+}
+
+static int get_ucg_freq(uintptr_t ucg_base, int ucg_channel, int parent_rate)
+{
+	int div;
+	uint32_t ctr;
+
+	ctr = mmio_read_32(UCG_CTR_REG(ucg_base, ucg_channel));
+	if (!(ctr & UCG_CTR_DIV_LOCK))
+		WARN("Clock divider is not locked\n");
+
+	div = (ctr & UCG_CTR_DIV_COEFF) >> 10;
+	if (div == 0)
+		div = 1;
+
+	if (mmio_read_32(UCG_BP_CTR_REG(ucg_base)) & BIT(ucg_channel))
+		return XTI_CLOCK;
+	else
+		return parent_rate / div;
+}
+
+void __dead2 system_reset(void)
+{
+	int clk_apb, service_subs_pll;
+
+	service_subs_pll = get_pll_freq(PLAT_SERVICE_SUBS_PLLCFG);
+	clk_apb = get_ucg_freq(PLAT_UCG1_BASE, 0, service_subs_pll);
+
+	/* Set timeout to ~2s and enable WDT if it is disabled */
+	if (dw_wdt_is_enabled(PLAT_WDT0_BASE))
+		dw_wdt_refresh(PLAT_WDT0_BASE, clk_apb * 2);
+	else
+		dw_wdt_start(PLAT_WDT0_BASE, clk_apb * 2);
+
+	/* wait for reset to assert... */
+	mdelay(500);
+	wfi();
+	ERROR("Failed to reset system\n");
+	panic();
 }
 
 static void cpu_standby(plat_local_state_t cpu_state)
@@ -106,6 +164,7 @@ const plat_psci_ops_t plat_psci_ops = {
 	.cpu_standby			= cpu_standby,
 	.pwr_domain_off			= pwr_domain_off,
 	.pwr_domain_pwr_down_wfi	= pwr_domain_pwr_down_wfi,
+	.system_reset			= system_reset,
 };
 
 int plat_setup_psci_ops(uintptr_t sec_entrypoint,

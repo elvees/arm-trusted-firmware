@@ -27,6 +27,7 @@ PLAT_BL_COMMON_SOURCES	+=	$(PLAT_PATH)/helpers.S			\
 				drivers/ti/uart/aarch64/16550_console.S \
 				drivers/delay_timer/delay_timer.c	\
 				drivers/delay_timer/generic_delay_timer.c \
+				drivers/synopsys/watchdog/dw_wdt.c	\
 				${XLAT_TABLES_LIB_SRCS}
 
 # Include GICv3 driver files
