@@ -48,8 +48,10 @@ func console_16550_core_init
 	beq	init_fail
 
 	/* Program the baudrate */
-	/* Divisor =  Uart clock / (16 * baudrate) */
+	/* Divisor =  ROUND_CLOSEST(Uart clock / (16 * baudrate)) */
+	lsl	r3, r2, #3
 	lsl	r2, r2, #4
+	add	r1, r1, r3
 	udiv	r2, r1, r2
 	and	r1, r2, #0xff		/* w1 = DLL */
 	lsr	r2, r2, #8
