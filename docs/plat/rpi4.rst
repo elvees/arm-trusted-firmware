@@ -24,11 +24,10 @@ one universal binary (bl31.bin), which can be built with:
 
     CROSS_COMPILE=aarch64-linux-gnu- make PLAT=rpi4 DEBUG=1
 
-Copy the generated build/rpi4/debug/bl31.bin to the SD card, either
-renaming it to ``armstub8.bin`` or adding an entry starting with ``armstub=``,
-then followed by the respective file name to ``config.txt``.
-You should have AArch64 code in the file loaded as the "kernel", as BL31
-will drop into AArch64/EL2 to the respective load address.
+Copy the generated build/rpi4/debug/bl31.bin to the SD card, adding an entry
+starting with ``armstub=``, then followed by the respective file name to
+``config.txt``. You should have AArch64 code in the file loaded as the
+"kernel", as BL31 will drop into AArch64/EL2 to the respective load address.
 arm64 Linux kernels are known to work this way.
 
 Other options that should be set in ``config.txt`` to properly boot 64-bit
@@ -61,7 +60,7 @@ As with the previous models, the GPU and its firmware are the first entity to
 run after the SoC gets its power. The on-chip Boot ROM loads the next stage
 (bootcode.bin) from flash (EEPROM), which is again GPU code.
 This part knows how to access the MMC controller and how to parse a FAT
-filesystem, so it will load further compononents and configuration files
+filesystem, so it will load further components and configuration files
 from the first FAT partition on the SD card.
 
 To accommodate this existing way of configuring and setting up the board,

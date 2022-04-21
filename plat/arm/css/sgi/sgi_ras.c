@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, ARM Limited and Contributors. All rights reserved.
+ * Copyright (c) 2018-2021, ARM Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -12,53 +12,59 @@
 #include <lib/extensions/ras.h>
 #include <plat/arm/common/arm_spm_def.h>
 #include <plat/common/platform.h>
-#include <services/mm_svc.h>
 #include <services/sdei.h>
-#include <services/spm_svc.h>
+#include <services/spm_mm_svc.h>
 
 #include <sgi_ras.h>
 
 static int sgi_ras_intr_handler(const struct err_record_info *err_rec,
 				int probe_data,
 				const struct err_handler_data *const data);
-struct efi_guid {
-	uint32_t	data1;
-	uint16_t	data2;
-	uint16_t	data3;
-	uint8_t		data4[8];
-};
-
 typedef struct mm_communicate_header {
 	struct efi_guid	header_guid;
 	size_t		message_len;
 	uint8_t		data[8];
 } mm_communicate_header_t;
 
+/*
+ * GUID to indicate that the MM communication message is intended for DMC-620
+ * MM driver.
+ */
+const struct efi_guid dmc620_ecc_event_guid = {
+	0x5ef0afd5, 0xe01a, 0x4c30,
+	{0x86, 0x19, 0x45, 0x46, 0x26, 0x91, 0x80, 0x98}
+};
+
 struct sgi_ras_ev_map sgi575_ras_map[] = {
 
-	/* DMC620 error overflow interrupt*/
-	{SP_DMC_ERROR_OVERFLOW_EVENT_AARCH64, SGI_SDEI_DS_EVENT_1, 33},
+	/* DMC 0 error ECC error interrupt*/
+	{SGI_SDEI_DS_EVENT_0, 35},
 
-	/* DMC620 error ECC error interrupt*/
-	{SP_DMC_ERROR_ECC_EVENT_AARCH64, SGI_SDEI_DS_EVENT_0, 35},
+	/* DMC 1 error ECC error interrupt*/
+	{SGI_SDEI_DS_EVENT_1, 39},
 };
 
 #define SGI575_RAS_MAP_SIZE	ARRAY_SIZE(sgi575_ras_map)
 
 struct err_record_info sgi_err_records[] = {
 	{
+		/* DMC 0 error record info */
 		.handler = &sgi_ras_intr_handler,
+		.aux_data = (void *)0,
+	}, {
+		/* DMC 1 error record info */
+		.handler = &sgi_ras_intr_handler,
+		.aux_data = (void *)1,
 	},
 };
 
 struct ras_interrupt sgi_ras_interrupts[] = {
 	{
-		.intr_number = 33,
-		.err_record = &sgi_err_records[0],
-	},
-	{
 		.intr_number = 35,
 		.err_record = &sgi_err_records[0],
+	}, {
+		.intr_number = 39,
+		.err_record = &sgi_err_records[1],
 	}
 };
 
@@ -112,6 +118,7 @@ static int sgi_ras_intr_handler(const struct err_record_info *err_rec,
 	struct sgi_ras_ev_map *ras_map;
 	mm_communicate_header_t *header;
 	uint32_t intr;
+	int ret;
 
 	cm_el1_sysregs_context_save(NON_SECURE);
 	intr = data->interrupt;
@@ -121,7 +128,7 @@ static int sgi_ras_intr_handler(const struct err_record_info *err_rec,
 	 * this interrupt
 	 */
 	ras_map = find_ras_event_map_by_intr(intr);
-	assert(ras_map);
+	assert(ras_map != NULL);
 
 	/*
 	 * Populate the MM_COMMUNICATE payload to share the
@@ -138,24 +145,36 @@ static int sgi_ras_intr_handler(const struct err_record_info *err_rec,
 	 */
 	header = (void *) PLAT_SPM_BUF_BASE;
 	memset(header, 0, sizeof(*header));
-	memcpy(&header->data, &ras_map->ras_ev_num,
-	       sizeof(ras_map->ras_ev_num));
-	header->message_len = 4;
+	memcpy(&header->data, &err_rec->aux_data, sizeof(err_rec->aux_data));
+	header->message_len = sizeof(err_rec->aux_data);
+	memcpy(&header->header_guid, (void *) &dmc620_ecc_event_guid,
+			sizeof(const struct efi_guid));
 
-	spm_sp_call(MM_COMMUNICATE_AARCH64, (uint64_t)header, 0,
-		    plat_my_core_pos());
+	spm_mm_sp_call(MM_COMMUNICATE_AARCH64, (uint64_t)header, 0,
+		       plat_my_core_pos());
 
 	/*
-	 * Do an EOI of the RAS interuupt. This allows the
+	 * Do an EOI of the RAS interrupt. This allows the
 	 * sdei event to be dispatched at the SDEI event's
 	 * priority.
 	 */
 	plat_ic_end_of_interrupt(intr);
 
 	/* Dispatch the event to the SDEI client */
-	sdei_dispatch_event(ras_map->sdei_ev_num);
+	ret = sdei_dispatch_event(ras_map->sdei_ev_num);
+	if (ret != 0) {
+		/*
+		 * sdei_dispatch_event() may return failing result in some cases,
+		 * for example kernel may not have registered a handler or RAS event
+		 * may happen early during boot. We restore the NS context when
+		 * sdei_dispatch_event() returns failing result.
+		 */
+		ERROR("SDEI dispatch failed: %d", ret);
+		cm_el1_sysregs_context_restore(NON_SECURE);
+		cm_set_next_eret_context(NON_SECURE);
+	}
 
-	return 0;
+	return ret;
 }
 
 int sgi_ras_intr_handler_setup(void)

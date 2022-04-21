@@ -1,5 +1,6 @@
 /*
- * Copyright (c) 2013-2019, ARM Limited and Contributors. All rights reserved.
+ * Copyright (c) 2013-2021, ARM Limited and Contributors. All rights reserved.
+ * Copyright (c) 2020, NVIDIA Corporation. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -96,6 +97,32 @@
 #define ICC_SGI0R_EL1		S3_0_c12_c11_7
 
 /*******************************************************************************
+ * Definitions for EL2 system registers for save/restore routine
+ ******************************************************************************/
+
+#define CNTPOFF_EL2		S3_4_C14_C0_6
+#define HAFGRTR_EL2		S3_4_C3_C1_6
+#define HDFGRTR_EL2		S3_4_C3_C1_4
+#define HDFGWTR_EL2		S3_4_C3_C1_5
+#define HFGITR_EL2		S3_4_C1_C1_6
+#define HFGRTR_EL2		S3_4_C1_C1_4
+#define HFGWTR_EL2		S3_4_C1_C1_5
+#define ICH_HCR_EL2		S3_4_C12_C11_0
+#define ICH_VMCR_EL2		S3_4_C12_C11_7
+#define MPAMVPM0_EL2		S3_4_C10_C5_0
+#define MPAMVPM1_EL2		S3_4_C10_C5_1
+#define MPAMVPM2_EL2		S3_4_C10_C5_2
+#define MPAMVPM3_EL2		S3_4_C10_C5_3
+#define MPAMVPM4_EL2		S3_4_C10_C5_4
+#define MPAMVPM5_EL2		S3_4_C10_C5_5
+#define MPAMVPM6_EL2		S3_4_C10_C5_6
+#define MPAMVPM7_EL2		S3_4_C10_C5_7
+#define MPAMVPMV_EL2		S3_4_C10_C4_1
+#define TRFCR_EL2		S3_4_C1_C2_1
+#define PMSCR_EL2		S3_4_C9_C9_0
+#define TFSR_EL2		S3_4_C5_C6_0
+
+/*******************************************************************************
  * Generic timer memory mapped registers & offsets
  ******************************************************************************/
 #define CNTCR_OFF			U(0x000)
@@ -134,12 +161,18 @@
 #define ID_AA64PFR0_EL3_SHIFT	U(12)
 #define ID_AA64PFR0_AMU_SHIFT	U(44)
 #define ID_AA64PFR0_AMU_MASK	ULL(0xf)
+#define ID_AA64PFR0_AMU_NOT_SUPPORTED	U(0x0)
+#define ID_AA64PFR0_AMU_V1	U(0x1)
+#define ID_AA64PFR0_AMU_V1P1	U(0x2)
 #define ID_AA64PFR0_ELX_MASK	ULL(0xf)
 #define ID_AA64PFR0_GIC_SHIFT	U(24)
 #define ID_AA64PFR0_GIC_WIDTH	U(4)
 #define ID_AA64PFR0_GIC_MASK	ULL(0xf)
 #define ID_AA64PFR0_SVE_SHIFT	U(32)
 #define ID_AA64PFR0_SVE_MASK	ULL(0xf)
+#define ID_AA64PFR0_SVE_LENGTH	U(4)
+#define ID_AA64PFR0_SEL2_SHIFT	U(36)
+#define ID_AA64PFR0_SEL2_MASK	ULL(0xf)
 #define ID_AA64PFR0_MPAM_SHIFT	U(40)
 #define ID_AA64PFR0_MPAM_MASK	ULL(0xf)
 #define ID_AA64PFR0_DIT_SHIFT	U(48)
@@ -149,15 +182,44 @@
 #define ID_AA64PFR0_CSV2_SHIFT	U(56)
 #define ID_AA64PFR0_CSV2_MASK	ULL(0xf)
 #define ID_AA64PFR0_CSV2_LENGTH	U(4)
+#define ID_AA64PFR0_FEAT_RME_SHIFT		U(52)
+#define ID_AA64PFR0_FEAT_RME_MASK		ULL(0xf)
+#define ID_AA64PFR0_FEAT_RME_LENGTH		U(4)
+#define ID_AA64PFR0_FEAT_RME_NOT_SUPPORTED	U(0)
+#define ID_AA64PFR0_FEAT_RME_V1			U(1)
 
 /* Exception level handling */
 #define EL_IMPL_NONE		ULL(0)
 #define EL_IMPL_A64ONLY		ULL(1)
 #define EL_IMPL_A64_A32		ULL(2)
 
+/* ID_AA64DFR0_EL1.TraceVer definitions */
+#define ID_AA64DFR0_TRACEVER_SHIFT	U(4)
+#define ID_AA64DFR0_TRACEVER_MASK	ULL(0xf)
+#define ID_AA64DFR0_TRACEVER_SUPPORTED	ULL(1)
+#define ID_AA64DFR0_TRACEVER_LENGTH	U(4)
+#define ID_AA64DFR0_TRACEFILT_SHIFT	U(40)
+#define ID_AA64DFR0_TRACEFILT_MASK	U(0xf)
+#define ID_AA64DFR0_TRACEFILT_SUPPORTED	U(1)
+#define ID_AA64DFR0_TRACEFILT_LENGTH	U(4)
+
 /* ID_AA64DFR0_EL1.PMS definitions (for ARMv8.2+) */
 #define ID_AA64DFR0_PMS_SHIFT	U(32)
 #define ID_AA64DFR0_PMS_MASK	ULL(0xf)
+
+/* ID_AA64DFR0_EL1.TraceBuffer definitions */
+#define ID_AA64DFR0_TRACEBUFFER_SHIFT		U(44)
+#define ID_AA64DFR0_TRACEBUFFER_MASK		ULL(0xf)
+#define ID_AA64DFR0_TRACEBUFFER_SUPPORTED	ULL(1)
+
+/* ID_AA64DFR0_EL1.MTPMU definitions (for ARMv8.6+) */
+#define ID_AA64DFR0_MTPMU_SHIFT		U(48)
+#define ID_AA64DFR0_MTPMU_MASK		ULL(0xf)
+#define ID_AA64DFR0_MTPMU_SUPPORTED	ULL(1)
+
+/* ID_AA64ISAR0_EL1 definitions */
+#define ID_AA64ISAR0_RNDR_SHIFT	U(60)
+#define ID_AA64ISAR0_RNDR_MASK	ULL(0xf)
 
 /* ID_AA64ISAR1_EL1 definitions */
 #define ID_AA64ISAR1_EL1	S3_0_C0_C6_1
@@ -182,6 +244,17 @@
 #define PARANGE_0101	U(48)
 #define PARANGE_0110	U(52)
 
+#define ID_AA64MMFR0_EL1_ECV_SHIFT		U(60)
+#define ID_AA64MMFR0_EL1_ECV_MASK		ULL(0xf)
+#define ID_AA64MMFR0_EL1_ECV_NOT_SUPPORTED	ULL(0x0)
+#define ID_AA64MMFR0_EL1_ECV_SUPPORTED		ULL(0x1)
+#define ID_AA64MMFR0_EL1_ECV_SELF_SYNCH	ULL(0x2)
+
+#define ID_AA64MMFR0_EL1_FGT_SHIFT		U(56)
+#define ID_AA64MMFR0_EL1_FGT_MASK		ULL(0xf)
+#define ID_AA64MMFR0_EL1_FGT_SUPPORTED		ULL(0x1)
+#define ID_AA64MMFR0_EL1_FGT_NOT_SUPPORTED	ULL(0x0)
+
 #define ID_AA64MMFR0_EL1_TGRAN4_SHIFT		U(28)
 #define ID_AA64MMFR0_EL1_TGRAN4_MASK		ULL(0xf)
 #define ID_AA64MMFR0_EL1_TGRAN4_SUPPORTED	ULL(0x0)
@@ -196,6 +269,27 @@
 #define ID_AA64MMFR0_EL1_TGRAN16_MASK		ULL(0xf)
 #define ID_AA64MMFR0_EL1_TGRAN16_SUPPORTED	ULL(0x1)
 #define ID_AA64MMFR0_EL1_TGRAN16_NOT_SUPPORTED	ULL(0x0)
+
+/* ID_AA64MMFR1_EL1 definitions */
+#define ID_AA64MMFR1_EL1_TWED_SHIFT		U(32)
+#define ID_AA64MMFR1_EL1_TWED_MASK		ULL(0xf)
+#define ID_AA64MMFR1_EL1_TWED_SUPPORTED		ULL(0x1)
+#define ID_AA64MMFR1_EL1_TWED_NOT_SUPPORTED	ULL(0x0)
+
+#define ID_AA64MMFR1_EL1_PAN_SHIFT		U(20)
+#define ID_AA64MMFR1_EL1_PAN_MASK		ULL(0xf)
+#define ID_AA64MMFR1_EL1_PAN_NOT_SUPPORTED	ULL(0x0)
+#define ID_AA64MMFR1_EL1_PAN_SUPPORTED		ULL(0x1)
+#define ID_AA64MMFR1_EL1_PAN2_SUPPORTED		ULL(0x2)
+#define ID_AA64MMFR1_EL1_PAN3_SUPPORTED		ULL(0x3)
+
+#define ID_AA64MMFR1_EL1_VHE_SHIFT		U(8)
+#define ID_AA64MMFR1_EL1_VHE_MASK		ULL(0xf)
+
+#define ID_AA64MMFR1_EL1_HCX_SHIFT		U(40)
+#define ID_AA64MMFR1_EL1_HCX_MASK		ULL(0xf)
+#define ID_AA64MMFR1_EL1_HCX_SUPPORTED		ULL(0x1)
+#define ID_AA64MMFR1_EL1_HCX_NOT_SUPPORTED	ULL(0x0)
 
 /* ID_AA64MMFR2_EL1 definitions */
 #define ID_AA64MMFR2_EL1		S3_0_C0_C7_2
@@ -220,9 +314,23 @@
 #define ID_AA64PFR1_EL1_MTE_SHIFT	U(8)
 #define ID_AA64PFR1_EL1_MTE_MASK	ULL(0xf)
 
-#define MTE_UNIMPLEMENTED	ULL(0)
-#define MTE_IMPLEMENTED_EL0	ULL(1)	/* MTE is only implemented at EL0 */
-#define MTE_IMPLEMENTED_ELX	ULL(2)	/* MTE is implemented at all ELs */
+/* Memory Tagging Extension is not implemented */
+#define MTE_UNIMPLEMENTED	U(0)
+/* FEAT_MTE: MTE instructions accessible at EL0 are implemented */
+#define MTE_IMPLEMENTED_EL0	U(1)
+/* FEAT_MTE2: Full MTE is implemented */
+#define MTE_IMPLEMENTED_ELX	U(2)
+/*
+ * FEAT_MTE3: MTE is implemented with support for
+ * asymmetric Tag Check Fault handling
+ */
+#define MTE_IMPLEMENTED_ASY	U(3)
+
+#define ID_AA64PFR1_MPAM_FRAC_SHIFT	ULL(16)
+#define ID_AA64PFR1_MPAM_FRAC_MASK	ULL(0xf)
+
+#define ID_AA64PFR1_EL1_SME_SHIFT	U(24)
+#define ID_AA64PFR1_EL1_SME_MASK	ULL(0xf)
 
 /* ID_PFR1_EL1 definitions */
 #define ID_PFR1_VIRTEXT_SHIFT	U(12)
@@ -235,8 +343,9 @@
 			 (U(1) << 22) | (U(1) << 18) | (U(1) << 16) | \
 			 (U(1) << 11) | (U(1) << 5) | (U(1) << 4))
 
-#define SCTLR_EL1_RES1	((U(1) << 29) | (U(1) << 28) | (U(1) << 23) | \
-			 (U(1) << 22) | (U(1) << 20) | (U(1) << 11))
+#define SCTLR_EL1_RES1	((UL(1) << 29) | (UL(1) << 28) | (UL(1) << 23) | \
+			 (UL(1) << 22) | (UL(1) << 20) | (UL(1) << 11))
+
 #define SCTLR_AARCH32_EL1_RES1 \
 			((U(1) << 23) | (U(1) << 22) | (U(1) << 11) | \
 			 (U(1) << 4) | (U(1) << 3))
@@ -251,9 +360,12 @@
 #define SCTLR_SA_BIT		(ULL(1) << 3)
 #define SCTLR_SA0_BIT		(ULL(1) << 4)
 #define SCTLR_CP15BEN_BIT	(ULL(1) << 5)
+#define SCTLR_nAA_BIT		(ULL(1) << 6)
 #define SCTLR_ITD_BIT		(ULL(1) << 7)
 #define SCTLR_SED_BIT		(ULL(1) << 8)
 #define SCTLR_UMA_BIT		(ULL(1) << 9)
+#define SCTLR_EnRCTX_BIT	(ULL(1) << 10)
+#define SCTLR_EOS_BIT		(ULL(1) << 11)
 #define SCTLR_I_BIT		(ULL(1) << 12)
 #define SCTLR_EnDB_BIT		(ULL(1) << 13)
 #define SCTLR_DZE_BIT		(ULL(1) << 14)
@@ -261,48 +373,121 @@
 #define SCTLR_NTWI_BIT		(ULL(1) << 16)
 #define SCTLR_NTWE_BIT		(ULL(1) << 18)
 #define SCTLR_WXN_BIT		(ULL(1) << 19)
-#define SCTLR_UWXN_BIT		(ULL(1) << 20)
+#define SCTLR_TSCXT_BIT		(ULL(1) << 20)
 #define SCTLR_IESB_BIT		(ULL(1) << 21)
+#define SCTLR_EIS_BIT		(ULL(1) << 22)
+#define SCTLR_SPAN_BIT		(ULL(1) << 23)
 #define SCTLR_E0E_BIT		(ULL(1) << 24)
 #define SCTLR_EE_BIT		(ULL(1) << 25)
 #define SCTLR_UCI_BIT		(ULL(1) << 26)
 #define SCTLR_EnDA_BIT		(ULL(1) << 27)
+#define SCTLR_nTLSMD_BIT	(ULL(1) << 28)
+#define SCTLR_LSMAOE_BIT	(ULL(1) << 29)
 #define SCTLR_EnIB_BIT		(ULL(1) << 30)
 #define SCTLR_EnIA_BIT		(ULL(1) << 31)
 #define SCTLR_BT0_BIT		(ULL(1) << 35)
 #define SCTLR_BT1_BIT		(ULL(1) << 36)
 #define SCTLR_BT_BIT		(ULL(1) << 36)
-#define SCTLR_DSSBS_BIT		(ULL(1) << 44)
+#define SCTLR_ITFSB_BIT		(ULL(1) << 37)
+#define SCTLR_TCF0_SHIFT	U(38)
+#define SCTLR_TCF0_MASK		ULL(3)
+#define SCTLR_ENTP2_BIT		(ULL(1) << 60)
+
+/* Tag Check Faults in EL0 have no effect on the PE */
+#define	SCTLR_TCF0_NO_EFFECT	U(0)
+/* Tag Check Faults in EL0 cause a synchronous exception */
+#define	SCTLR_TCF0_SYNC		U(1)
+/* Tag Check Faults in EL0 are asynchronously accumulated */
+#define	SCTLR_TCF0_ASYNC	U(2)
+/*
+ * Tag Check Faults in EL0 cause a synchronous exception on reads,
+ * and are asynchronously accumulated on writes
+ */
+#define	SCTLR_TCF0_SYNCR_ASYNCW	U(3)
+
+#define SCTLR_TCF_SHIFT		U(40)
+#define SCTLR_TCF_MASK		ULL(3)
+
+/* Tag Check Faults in EL1 have no effect on the PE */
+#define	SCTLR_TCF_NO_EFFECT	U(0)
+/* Tag Check Faults in EL1 cause a synchronous exception */
+#define	SCTLR_TCF_SYNC		U(1)
+/* Tag Check Faults in EL1 are asynchronously accumulated */
+#define	SCTLR_TCF_ASYNC		U(2)
+/*
+ * Tag Check Faults in EL1 cause a synchronous exception on reads,
+ * and are asynchronously accumulated on writes
+ */
+#define	SCTLR_TCF_SYNCR_ASYNCW	U(3)
+
+#define SCTLR_ATA0_BIT		(ULL(1) << 42)
+#define SCTLR_ATA_BIT		(ULL(1) << 43)
+#define SCTLR_DSSBS_SHIFT	U(44)
+#define SCTLR_DSSBS_BIT		(ULL(1) << SCTLR_DSSBS_SHIFT)
+#define SCTLR_TWEDEn_BIT	(ULL(1) << 45)
+#define SCTLR_TWEDEL_SHIFT	U(46)
+#define SCTLR_TWEDEL_MASK	ULL(0xf)
+#define SCTLR_EnASR_BIT		(ULL(1) << 54)
+#define SCTLR_EnAS0_BIT		(ULL(1) << 55)
+#define SCTLR_EnALS_BIT		(ULL(1) << 56)
+#define SCTLR_EPAN_BIT		(ULL(1) << 57)
 #define SCTLR_RESET_VAL		SCTLR_EL3_RES1
 
-/* CPACR_El1 definitions */
+/* CPACR_EL1 definitions */
 #define CPACR_EL1_FPEN(x)	((x) << 20)
-#define CPACR_EL1_FP_TRAP_EL0	U(0x1)
-#define CPACR_EL1_FP_TRAP_ALL	U(0x2)
-#define CPACR_EL1_FP_TRAP_NONE	U(0x3)
+#define CPACR_EL1_FP_TRAP_EL0	UL(0x1)
+#define CPACR_EL1_FP_TRAP_ALL	UL(0x2)
+#define CPACR_EL1_FP_TRAP_NONE	UL(0x3)
 
 /* SCR definitions */
 #define SCR_RES1_BITS		((U(1) << 4) | (U(1) << 5))
-#define SCR_ATA_BIT		(U(1) << 26)
-#define SCR_FIEN_BIT		(U(1) << 21)
-#define SCR_API_BIT		(U(1) << 17)
-#define SCR_APK_BIT		(U(1) << 16)
-#define SCR_TWE_BIT		(U(1) << 13)
-#define SCR_TWI_BIT		(U(1) << 12)
-#define SCR_ST_BIT		(U(1) << 11)
-#define SCR_RW_BIT		(U(1) << 10)
-#define SCR_SIF_BIT		(U(1) << 9)
-#define SCR_HCE_BIT		(U(1) << 8)
-#define SCR_SMD_BIT		(U(1) << 7)
-#define SCR_EA_BIT		(U(1) << 3)
-#define SCR_FIQ_BIT		(U(1) << 2)
-#define SCR_IRQ_BIT		(U(1) << 1)
-#define SCR_NS_BIT		(U(1) << 0)
-#define SCR_VALID_BIT_MASK	U(0x2f8f)
+#define SCR_NSE_SHIFT		U(62)
+#define SCR_NSE_BIT		(ULL(1) << SCR_NSE_SHIFT)
+#define SCR_GPF_BIT		(UL(1) << 48)
+#define SCR_TWEDEL_SHIFT	U(30)
+#define SCR_TWEDEL_MASK		ULL(0xf)
+#define SCR_HXEn_BIT		(UL(1) << 38)
+#define SCR_ENTP2_SHIFT		U(41)
+#define SCR_ENTP2_BIT		(UL(1) << SCR_ENTP2_SHIFT)
+#define SCR_AMVOFFEN_BIT	(UL(1) << 35)
+#define SCR_TWEDEn_BIT		(UL(1) << 29)
+#define SCR_ECVEN_BIT		(UL(1) << 28)
+#define SCR_FGTEN_BIT		(UL(1) << 27)
+#define SCR_ATA_BIT		(UL(1) << 26)
+#define SCR_EnSCXT_BIT		(UL(1) << 25)
+#define SCR_FIEN_BIT		(UL(1) << 21)
+#define SCR_EEL2_BIT		(UL(1) << 18)
+#define SCR_API_BIT		(UL(1) << 17)
+#define SCR_APK_BIT		(UL(1) << 16)
+#define SCR_TERR_BIT		(UL(1) << 15)
+#define SCR_TWE_BIT		(UL(1) << 13)
+#define SCR_TWI_BIT		(UL(1) << 12)
+#define SCR_ST_BIT		(UL(1) << 11)
+#define SCR_RW_BIT		(UL(1) << 10)
+#define SCR_SIF_BIT		(UL(1) << 9)
+#define SCR_HCE_BIT		(UL(1) << 8)
+#define SCR_SMD_BIT		(UL(1) << 7)
+#define SCR_EA_BIT		(UL(1) << 3)
+#define SCR_FIQ_BIT		(UL(1) << 2)
+#define SCR_IRQ_BIT		(UL(1) << 1)
+#define SCR_NS_BIT		(UL(1) << 0)
+#define SCR_VALID_BIT_MASK	U(0x24000002F8F)
 #define SCR_RESET_VAL		SCR_RES1_BITS
 
 /* MDCR_EL3 definitions */
+#define MDCR_EnPMSN_BIT		(ULL(1) << 36)
+#define MDCR_MPMX_BIT		(ULL(1) << 35)
+#define MDCR_MCCD_BIT		(ULL(1) << 34)
+#define MDCR_NSTB(x)		((x) << 24)
+#define MDCR_NSTB_EL1		ULL(0x3)
+#define MDCR_NSTBE		(ULL(1) << 26)
+#define MDCR_MTPME_BIT		(ULL(1) << 28)
+#define MDCR_TDCC_BIT		(ULL(1) << 27)
 #define MDCR_SCCD_BIT		(ULL(1) << 23)
+#define MDCR_EPMAD_BIT		(ULL(1) << 21)
+#define MDCR_EDAD_BIT		(ULL(1) << 20)
+#define MDCR_TTRF_BIT		(ULL(1) << 19)
+#define MDCR_STE_BIT		(ULL(1) << 18)
 #define MDCR_SPME_BIT		(ULL(1) << 17)
 #define MDCR_SDD_BIT		(ULL(1) << 16)
 #define MDCR_SPD32(x)		((x) << 14)
@@ -317,7 +502,10 @@
 #define MDCR_EL3_RESET_VAL	ULL(0x0)
 
 /* MDCR_EL2 definitions */
+#define MDCR_EL2_MTPME		(U(1) << 28)
 #define MDCR_EL2_HLP		(U(1) << 26)
+#define MDCR_EL2_E2TB(x)	((x) << 24)
+#define MDCR_EL2_E2TB_EL1	U(0x3)
 #define MDCR_EL2_HCCD		(U(1) << 23)
 #define MDCR_EL2_TTRF		(U(1) << 19)
 #define MDCR_EL2_HPMD		(U(1) << 17)
@@ -349,11 +537,19 @@
 #define VTTBR_BADDR_SHIFT	U(0)
 
 /* HCR definitions */
+#define HCR_RESET_VAL		ULL(0x0)
+#define HCR_AMVOFFEN_SHIFT	U(51)
+#define HCR_AMVOFFEN_BIT	(ULL(1) << HCR_AMVOFFEN_SHIFT)
+#define HCR_TEA_BIT		(ULL(1) << 47)
 #define HCR_API_BIT		(ULL(1) << 41)
 #define HCR_APK_BIT		(ULL(1) << 40)
+#define HCR_E2H_BIT		(ULL(1) << 34)
+#define HCR_HCD_BIT		(ULL(1) << 29)
 #define HCR_TGE_BIT		(ULL(1) << 27)
 #define HCR_RW_SHIFT		U(31)
 #define HCR_RW_BIT		(ULL(1) << HCR_RW_SHIFT)
+#define HCR_TWE_BIT		(ULL(1) << 14)
+#define HCR_TWI_BIT		(ULL(1) << 13)
 #define HCR_AMO_BIT		(ULL(1) << 5)
 #define HCR_IMO_BIT		(ULL(1) << 4)
 #define HCR_FMO_BIT		(ULL(1) << 3)
@@ -381,20 +577,31 @@
 
 /* CPTR_EL3 definitions */
 #define TCPAC_BIT		(U(1) << 31)
-#define TAM_BIT			(U(1) << 30)
+#define TAM_SHIFT		U(30)
+#define TAM_BIT			(U(1) << TAM_SHIFT)
 #define TTA_BIT			(U(1) << 20)
+#define ESM_BIT			(U(1) << 12)
 #define TFP_BIT			(U(1) << 10)
 #define CPTR_EZ_BIT		(U(1) << 8)
-#define CPTR_EL3_RESET_VAL	U(0x0)
+#define CPTR_EL3_RESET_VAL	((TCPAC_BIT | TAM_BIT | TTA_BIT | TFP_BIT) & \
+				~(CPTR_EZ_BIT | ESM_BIT))
 
 /* CPTR_EL2 definitions */
 #define CPTR_EL2_RES1		((U(1) << 13) | (U(1) << 12) | (U(0x3ff)))
 #define CPTR_EL2_TCPAC_BIT	(U(1) << 31)
-#define CPTR_EL2_TAM_BIT	(U(1) << 30)
+#define CPTR_EL2_TAM_SHIFT	U(30)
+#define CPTR_EL2_TAM_BIT	(U(1) << CPTR_EL2_TAM_SHIFT)
+#define CPTR_EL2_SMEN_MASK	ULL(0x3)
+#define CPTR_EL2_SMEN_SHIFT	U(24)
 #define CPTR_EL2_TTA_BIT	(U(1) << 20)
+#define CPTR_EL2_TSM_BIT	(U(1) << 12)
 #define CPTR_EL2_TFP_BIT	(U(1) << 10)
 #define CPTR_EL2_TZ_BIT		(U(1) << 8)
 #define CPTR_EL2_RESET_VAL	CPTR_EL2_RES1
+
+/* VTCR_EL2 definitions */
+#define VTCR_RESET_VAL		U(0x0)
+#define VTCR_EL2_MSA		(U(1) << 31)
 
 /* CPSR/SPSR definitions */
 #define DAIF_FIQ_BIT		(U(1) << 0)
@@ -421,9 +628,21 @@
 #define SPSR_M_MASK		U(0x1)
 #define SPSR_M_AARCH64		U(0x0)
 #define SPSR_M_AARCH32		U(0x1)
+#define SPSR_M_EL2H		U(0x9)
 
-#define SPSR_SSBS_BIT_AARCH64	BIT_64(12)
-#define SPSR_SSBS_BIT_AARCH32	BIT_64(23)
+#define SPSR_EL_SHIFT		U(2)
+#define SPSR_EL_WIDTH		U(2)
+
+#define SPSR_SSBS_SHIFT_AARCH64 U(12)
+#define SPSR_SSBS_BIT_AARCH64	(ULL(1) << SPSR_SSBS_SHIFT_AARCH64)
+#define SPSR_SSBS_SHIFT_AARCH32 U(23)
+#define SPSR_SSBS_BIT_AARCH32	(ULL(1) << SPSR_SSBS_SHIFT_AARCH32)
+
+#define SPSR_PAN_BIT		BIT_64(22)
+
+#define SPSR_DIT_BIT		BIT(24)
+
+#define SPSR_TCO_BIT_AARCH64	BIT_64(25)
 
 #define DISABLE_ALL_EXCEPTIONS \
 		(DAIF_FIQ_BIT | DAIF_IRQ_BIT | DAIF_ABT_BIT | DAIF_DBG_BIT)
@@ -527,6 +746,7 @@
 
 #define MODE_EL_SHIFT		U(0x2)
 #define MODE_EL_MASK		U(0x3)
+#define MODE_EL_WIDTH		U(0x2)
 #define MODE_EL3		U(0x3)
 #define MODE_EL2		U(0x2)
 #define MODE_EL1		U(0x1)
@@ -586,13 +806,17 @@
 #define MAX_CACHE_LINE_SIZE	U(0x800) /* 2KB */
 
 /* Physical timer control register bit fields shifts and masks */
-#define CNTP_CTL_ENABLE_SHIFT   U(0)
-#define CNTP_CTL_IMASK_SHIFT    U(1)
-#define CNTP_CTL_ISTATUS_SHIFT  U(2)
+#define CNTP_CTL_ENABLE_SHIFT	U(0)
+#define CNTP_CTL_IMASK_SHIFT	U(1)
+#define CNTP_CTL_ISTATUS_SHIFT	U(2)
 
-#define CNTP_CTL_ENABLE_MASK    U(1)
-#define CNTP_CTL_IMASK_MASK     U(1)
-#define CNTP_CTL_ISTATUS_MASK   U(1)
+#define CNTP_CTL_ENABLE_MASK	U(1)
+#define CNTP_CTL_IMASK_MASK	U(1)
+#define CNTP_CTL_ISTATUS_MASK	U(1)
+
+/* Physical timer control macros */
+#define CNTP_CTL_ENABLE_BIT	(U(1) << CNTP_CTL_ENABLE_SHIFT)
+#define CNTP_CTL_IMASK_BIT	(U(1) << CNTP_CTL_IMASK_SHIFT)
 
 /* Exception Syndrome register bits and bobs */
 #define ESR_EC_SHIFT			U(26)
@@ -705,6 +929,20 @@
 #define ZCR_EL2_LEN_MASK	U(0xf)
 
 /*******************************************************************************
+ * Definitions for system register interface to SME as needed in EL3
+ ******************************************************************************/
+#define ID_AA64SMFR0_EL1		S3_0_C0_C4_5
+#define SMCR_EL3			S3_6_C1_C2_6
+
+/* ID_AA64SMFR0_EL1 definitions */
+#define ID_AA64SMFR0_EL1_FA64_BIT	(UL(1) << 63)
+
+/* SMCR_ELx definitions */
+#define SMCR_ELX_LEN_SHIFT		U(0)
+#define SMCR_ELX_LEN_MASK		U(0x1ff)
+#define SMCR_ELX_FA64_BIT		(U(1) << 31)
+
+/*******************************************************************************
  * Definitions of MAIR encodings for device and normal memory
  ******************************************************************************/
 /*
@@ -774,7 +1012,7 @@
 #define MPAM3_EL3		S3_6_C10_C5_0
 
 /*******************************************************************************
- * Definitions for system register interface to AMU for ARMv8.4 onwards
+ * Definitions for system register interface to AMU for FEAT_AMUv1
  ******************************************************************************/
 #define AMCR_EL0		S3_3_C13_C2_0
 #define AMCFGR_EL0		S3_3_C13_C2_1
@@ -833,9 +1071,32 @@
 #define AMEVTYPER1E_EL0		S3_3_C13_C15_6
 #define AMEVTYPER1F_EL0		S3_3_C13_C15_7
 
+/* AMCNTENSET0_EL0 definitions */
+#define AMCNTENSET0_EL0_Pn_SHIFT	U(0)
+#define AMCNTENSET0_EL0_Pn_MASK		ULL(0xffff)
+
+/* AMCNTENSET1_EL0 definitions */
+#define AMCNTENSET1_EL0_Pn_SHIFT	U(0)
+#define AMCNTENSET1_EL0_Pn_MASK		ULL(0xffff)
+
+/* AMCNTENCLR0_EL0 definitions */
+#define AMCNTENCLR0_EL0_Pn_SHIFT	U(0)
+#define AMCNTENCLR0_EL0_Pn_MASK		ULL(0xffff)
+
+/* AMCNTENCLR1_EL0 definitions */
+#define AMCNTENCLR1_EL0_Pn_SHIFT	U(0)
+#define AMCNTENCLR1_EL0_Pn_MASK		ULL(0xffff)
+
+/* AMCFGR_EL0 definitions */
+#define AMCFGR_EL0_NCG_SHIFT	U(28)
+#define AMCFGR_EL0_NCG_MASK	U(0xf)
+#define AMCFGR_EL0_N_SHIFT	U(0)
+#define AMCFGR_EL0_N_MASK	U(0xff)
+
 /* AMCGCR_EL0 definitions */
+#define AMCGCR_EL0_CG0NC_SHIFT	U(0)
+#define AMCGCR_EL0_CG0NC_MASK	U(0xff)
 #define AMCGCR_EL0_CG1NC_SHIFT	U(8)
-#define AMCGCR_EL0_CG1NC_LENGTH	U(8)
 #define AMCGCR_EL0_CG1NC_MASK	U(0xff)
 
 /* MPAM register definitions */
@@ -846,6 +1107,57 @@
 #define MPAM2_EL2_TRAPMPAM1EL1		(ULL(1) << 48)
 
 #define MPAMIDR_HAS_HCR_BIT		(ULL(1) << 17)
+
+/*******************************************************************************
+ * Definitions for system register interface to AMU for FEAT_AMUv1p1
+ ******************************************************************************/
+
+/* Definition for register defining which virtual offsets are implemented. */
+#define AMCG1IDR_EL0		S3_3_C13_C2_6
+#define AMCG1IDR_CTR_MASK	ULL(0xffff)
+#define AMCG1IDR_CTR_SHIFT	U(0)
+#define AMCG1IDR_VOFF_MASK	ULL(0xffff)
+#define AMCG1IDR_VOFF_SHIFT	U(16)
+
+/* New bit added to AMCR_EL0 */
+#define AMCR_CG1RZ_SHIFT	U(17)
+#define AMCR_CG1RZ_BIT		(ULL(0x1) << AMCR_CG1RZ_SHIFT)
+
+/*
+ * Definitions for virtual offset registers for architected activity monitor
+ * event counters.
+ * AMEVCNTVOFF01_EL2 intentionally left undefined, as it does not exist.
+ */
+#define AMEVCNTVOFF00_EL2	S3_4_C13_C8_0
+#define AMEVCNTVOFF02_EL2	S3_4_C13_C8_2
+#define AMEVCNTVOFF03_EL2	S3_4_C13_C8_3
+
+/*
+ * Definitions for virtual offset registers for auxiliary activity monitor event
+ * counters.
+ */
+#define AMEVCNTVOFF10_EL2	S3_4_C13_C10_0
+#define AMEVCNTVOFF11_EL2	S3_4_C13_C10_1
+#define AMEVCNTVOFF12_EL2	S3_4_C13_C10_2
+#define AMEVCNTVOFF13_EL2	S3_4_C13_C10_3
+#define AMEVCNTVOFF14_EL2	S3_4_C13_C10_4
+#define AMEVCNTVOFF15_EL2	S3_4_C13_C10_5
+#define AMEVCNTVOFF16_EL2	S3_4_C13_C10_6
+#define AMEVCNTVOFF17_EL2	S3_4_C13_C10_7
+#define AMEVCNTVOFF18_EL2	S3_4_C13_C11_0
+#define AMEVCNTVOFF19_EL2	S3_4_C13_C11_1
+#define AMEVCNTVOFF1A_EL2	S3_4_C13_C11_2
+#define AMEVCNTVOFF1B_EL2	S3_4_C13_C11_3
+#define AMEVCNTVOFF1C_EL2	S3_4_C13_C11_4
+#define AMEVCNTVOFF1D_EL2	S3_4_C13_C11_5
+#define AMEVCNTVOFF1E_EL2	S3_4_C13_C11_6
+#define AMEVCNTVOFF1F_EL2	S3_4_C13_C11_7
+
+/*******************************************************************************
+ * Realm management extension register definitions
+ ******************************************************************************/
+#define GPCCR_EL3			S3_6_C2_C1_6
+#define GPTBR_EL3			S3_6_C2_C1_4
 
 /*******************************************************************************
  * RAS system registers
@@ -908,5 +1220,37 @@
 #define TFSR_EL1		S3_0_C5_C6_0
 #define RGSR_EL1		S3_0_C1_C0_5
 #define GCR_EL1			S3_0_C1_C0_6
+
+/*******************************************************************************
+ * FEAT_HCX - Extended Hypervisor Configuration Register
+ ******************************************************************************/
+#define HCRX_EL2		S3_4_C1_C2_2
+#define HCRX_EL2_FGTnXS_BIT	(UL(1) << 4)
+#define HCRX_EL2_FnXS_BIT	(UL(1) << 3)
+#define HCRX_EL2_EnASR_BIT	(UL(1) << 2)
+#define HCRX_EL2_EnALS_BIT	(UL(1) << 1)
+#define HCRX_EL2_EnAS0_BIT	(UL(1) << 0)
+
+/*******************************************************************************
+ * Definitions for DynamicIQ Shared Unit registers
+ ******************************************************************************/
+#define CLUSTERPWRDN_EL1	S3_0_c15_c3_6
+
+/* CLUSTERPWRDN_EL1 register definitions */
+#define DSU_CLUSTER_PWR_OFF	0
+#define DSU_CLUSTER_PWR_ON	1
+#define DSU_CLUSTER_PWR_MASK	U(1)
+
+/*******************************************************************************
+ * Definitions for CPU Power/Performance Management registers
+ ******************************************************************************/
+
+#define CPUPPMCR_EL3			S3_6_C15_C2_0
+#define CPUPPMCR_EL3_MPMMPINCTL_SHIFT	UINT64_C(0)
+#define CPUPPMCR_EL3_MPMMPINCTL_MASK	UINT64_C(0x1)
+
+#define CPUMPMMCR_EL3			S3_6_C15_C2_1
+#define CPUMPMMCR_EL3_MPMM_EN_SHIFT	UINT64_C(0)
+#define CPUMPMMCR_EL3_MPMM_EN_MASK	UINT64_C(0x1)
 
 #endif /* ARCH_H */

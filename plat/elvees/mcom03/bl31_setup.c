@@ -17,7 +17,7 @@
 
 #include <mcom03.h>
 
-static console_16550_t console;
+static console_t console;
 static entry_point_info_t bl33_image_ep_info;
 
 IMPORT_SYM(uintptr_t, __SPM_SHIM_EXCEPTIONS_START__, SPM_SHIM_EXCEPTIONS_START);
@@ -60,7 +60,7 @@ void bl31_early_platform_setup2(u_register_t arg0, u_register_t arg1,
 			       PLAT_BOOT_UART_CLK_IN_HZ,
 			       PLAT_CONSOLE_BAUDRATE, &console);
 
-	console_set_scope(&console.console, CONSOLE_FLAG_BOOT |
+	console_set_scope(&console, CONSOLE_FLAG_BOOT |
 			  CONSOLE_FLAG_RUNTIME);
 
 	/* There are no parameters from BL2 if BL31 is a reset vector */

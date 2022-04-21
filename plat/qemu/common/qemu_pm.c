@@ -10,9 +10,13 @@
 #include <arch_helpers.h>
 #include <common/debug.h>
 #include <lib/psci/psci.h>
+#include <lib/semihosting.h>
 #include <plat/common/platform.h>
+#include <drivers/gpio.h>
 
 #include "qemu_private.h"
+
+#define ADP_STOPPED_APPLICATION_EXIT 0x20026
 
 /*
  * The secure entry point to be used on warm reset.
@@ -149,9 +153,18 @@ static int qemu_pwr_domain_on(u_register_t mpidr)
  * Platform handler called when a power domain is about to be turned off. The
  * target_state encodes the power state that each level should transition to.
  ******************************************************************************/
-void qemu_pwr_domain_off(const psci_power_state_t *target_state)
+static void qemu_pwr_domain_off(const psci_power_state_t *target_state)
 {
-	assert(0);
+	qemu_pwr_gic_off();
+}
+
+void __dead2 plat_secondary_cold_boot_setup(void);
+
+static void __dead2
+qemu_pwr_domain_pwr_down_wfi(const psci_power_state_t *target_state)
+{
+	disable_mmu_el3();
+	plat_secondary_cold_boot_setup();
 }
 
 /*******************************************************************************
@@ -189,15 +202,31 @@ void qemu_pwr_domain_suspend_finish(const psci_power_state_t *target_state)
 /*******************************************************************************
  * Platform handlers to shutdown/reboot the system
  ******************************************************************************/
+
 static void __dead2 qemu_system_off(void)
 {
-	ERROR("QEMU System Off: operation not handled.\n");
+#ifdef SECURE_GPIO_BASE
+	ERROR("QEMU System Power off: with GPIO.\n");
+	gpio_set_direction(SECURE_GPIO_POWEROFF, GPIO_DIR_OUT);
+	gpio_set_value(SECURE_GPIO_POWEROFF, GPIO_LEVEL_LOW);
+	gpio_set_value(SECURE_GPIO_POWEROFF, GPIO_LEVEL_HIGH);
+#else
+	semihosting_exit(ADP_STOPPED_APPLICATION_EXIT, 0);
+	ERROR("QEMU System Off: semihosting call unexpectedly returned.\n");
+#endif
 	panic();
 }
 
 static void __dead2 qemu_system_reset(void)
 {
+	ERROR("QEMU System Reset: with GPIO.\n");
+#ifdef SECURE_GPIO_BASE
+	gpio_set_direction(SECURE_GPIO_RESET, GPIO_DIR_OUT);
+	gpio_set_value(SECURE_GPIO_RESET, GPIO_LEVEL_LOW);
+	gpio_set_value(SECURE_GPIO_RESET, GPIO_LEVEL_HIGH);
+#else
 	ERROR("QEMU System Reset: operation not handled.\n");
+#endif
 	panic();
 }
 
@@ -205,6 +234,7 @@ static const plat_psci_ops_t plat_qemu_psci_pm_ops = {
 	.cpu_standby = qemu_cpu_standby,
 	.pwr_domain_on = qemu_pwr_domain_on,
 	.pwr_domain_off = qemu_pwr_domain_off,
+	.pwr_domain_pwr_down_wfi = qemu_pwr_domain_pwr_down_wfi,
 	.pwr_domain_suspend = qemu_pwr_domain_suspend,
 	.pwr_domain_on_finish = qemu_pwr_domain_on_finish,
 	.pwr_domain_suspend_finish = qemu_pwr_domain_suspend_finish,

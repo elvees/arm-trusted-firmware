@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2019, ARM Limited and Contributors. All rights reserved.
+ * Copyright (c) 2015-2021, ARM Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -16,26 +16,47 @@
 /* Internal layout of the 32bit OTP word board_id */
 #define BOARD_ID_BOARD_NB_MASK		GENMASK(31, 16)
 #define BOARD_ID_BOARD_NB_SHIFT		16
-#define BOARD_ID_VARIANT_MASK		GENMASK(15, 12)
-#define BOARD_ID_VARIANT_SHIFT		12
+#define BOARD_ID_VARCPN_MASK		GENMASK(15, 12)
+#define BOARD_ID_VARCPN_SHIFT		12
 #define BOARD_ID_REVISION_MASK		GENMASK(11, 8)
 #define BOARD_ID_REVISION_SHIFT		8
+#define BOARD_ID_VARFG_MASK		GENMASK(7, 4)
+#define BOARD_ID_VARFG_SHIFT		4
 #define BOARD_ID_BOM_MASK		GENMASK(3, 0)
 
 #define BOARD_ID2NB(_id)		(((_id) & BOARD_ID_BOARD_NB_MASK) >> \
 					 BOARD_ID_BOARD_NB_SHIFT)
-#define BOARD_ID2VAR(_id)		(((_id) & BOARD_ID_VARIANT_MASK) >> \
-					 BOARD_ID_VARIANT_SHIFT)
+#define BOARD_ID2VARCPN(_id)		(((_id) & BOARD_ID_VARCPN_MASK) >> \
+					 BOARD_ID_VARCPN_SHIFT)
 #define BOARD_ID2REV(_id)		(((_id) & BOARD_ID_REVISION_MASK) >> \
 					 BOARD_ID_REVISION_SHIFT)
+#define BOARD_ID2VARFG(_id)		(((_id) & BOARD_ID_VARFG_MASK) >> \
+					 BOARD_ID_VARFG_SHIFT)
 #define BOARD_ID2BOM(_id)		((_id) & BOARD_ID_BOM_MASK)
 
-#define MAP_SRAM	MAP_REGION_FLAT(STM32MP_SYSRAM_BASE, \
+#if defined(IMAGE_BL2)
+#define MAP_SEC_SYSRAM	MAP_REGION_FLAT(STM32MP_SYSRAM_BASE, \
 					STM32MP_SYSRAM_SIZE, \
 					MT_MEMORY | \
 					MT_RW | \
 					MT_SECURE | \
 					MT_EXECUTE_NEVER)
+#elif defined(IMAGE_BL32)
+#define MAP_SEC_SYSRAM	MAP_REGION_FLAT(STM32MP_SEC_SYSRAM_BASE, \
+					STM32MP_SEC_SYSRAM_SIZE, \
+					MT_MEMORY | \
+					MT_RW | \
+					MT_SECURE | \
+					MT_EXECUTE_NEVER)
+
+/* Non-secure SYSRAM is used a uncached memory for SCMI message transfer */
+#define MAP_NS_SYSRAM	MAP_REGION_FLAT(STM32MP_NS_SYSRAM_BASE, \
+					STM32MP_NS_SYSRAM_SIZE, \
+					MT_DEVICE | \
+					MT_RW | \
+					MT_NS | \
+					MT_EXECUTE_NEVER)
+#endif
 
 #define MAP_DEVICE1	MAP_REGION_FLAT(STM32MP1_DEVICE1_BASE, \
 					STM32MP1_DEVICE1_SIZE, \
@@ -53,7 +74,7 @@
 
 #if defined(IMAGE_BL2)
 static const mmap_region_t stm32mp1_mmap[] = {
-	MAP_SRAM,
+	MAP_SEC_SYSRAM,
 	MAP_DEVICE1,
 	MAP_DEVICE2,
 	{0}
@@ -61,7 +82,8 @@ static const mmap_region_t stm32mp1_mmap[] = {
 #endif
 #if defined(IMAGE_BL32)
 static const mmap_region_t stm32mp1_mmap[] = {
-	MAP_SRAM,
+	MAP_SEC_SYSRAM,
+	MAP_NS_SYSRAM,
 	MAP_DEVICE1,
 	MAP_DEVICE2,
 	{0}
@@ -76,6 +98,28 @@ void configure_mmu(void)
 	enable_mmu_svc_mon(0);
 }
 
+uintptr_t stm32_get_gpio_bank_base(unsigned int bank)
+{
+	if (bank == GPIO_BANK_Z) {
+		return GPIOZ_BASE;
+	}
+
+	assert(GPIO_BANK_A == 0 && bank <= GPIO_BANK_K);
+
+	return GPIOA_BASE + (bank * GPIO_BANK_OFFSET);
+}
+
+uint32_t stm32_get_gpio_bank_offset(unsigned int bank)
+{
+	if (bank == GPIO_BANK_Z) {
+		return 0;
+	}
+
+	assert(GPIO_BANK_A == 0 && bank <= GPIO_BANK_K);
+
+	return bank * GPIO_BANK_OFFSET;
+}
+
 unsigned long stm32_get_gpio_bank_clock(unsigned int bank)
 {
 	if (bank == GPIO_BANK_Z) {
@@ -87,59 +131,92 @@ unsigned long stm32_get_gpio_bank_clock(unsigned int bank)
 	return GPIOA + (bank - GPIO_BANK_A);
 }
 
-static int get_part_number(uint32_t *part_nb)
+int stm32_get_gpio_bank_pinctrl_node(void *fdt, unsigned int bank)
 {
-	uint32_t part_number;
+	switch (bank) {
+	case GPIO_BANK_A:
+	case GPIO_BANK_B:
+	case GPIO_BANK_C:
+	case GPIO_BANK_D:
+	case GPIO_BANK_E:
+	case GPIO_BANK_F:
+	case GPIO_BANK_G:
+	case GPIO_BANK_H:
+	case GPIO_BANK_I:
+	case GPIO_BANK_J:
+	case GPIO_BANK_K:
+		return fdt_path_offset(fdt, "/soc/pin-controller");
+	case GPIO_BANK_Z:
+		return fdt_path_offset(fdt, "/soc/pin-controller-z");
+	default:
+		panic();
+	}
+}
+
+uint32_t stm32mp_get_chip_version(void)
+{
+	uint32_t version = 0U;
+
+	if (stm32mp1_dbgmcu_get_chip_version(&version) < 0) {
+		INFO("Cannot get CPU version, debug disabled\n");
+		return 0U;
+	}
+
+	return version;
+}
+
+uint32_t stm32mp_get_chip_dev_id(void)
+{
 	uint32_t dev_id;
 
 	if (stm32mp1_dbgmcu_get_chip_dev_id(&dev_id) < 0) {
-		return -1;
+		INFO("Use default chip ID, debug disabled\n");
+		dev_id = STM32MP1_CHIP_ID;
+	}
+
+	return dev_id;
+}
+
+static uint32_t get_part_number(void)
+{
+	static uint32_t part_number;
+
+	if (part_number != 0U) {
+		return part_number;
 	}
 
 	if (bsec_shadow_read_otp(&part_number, PART_NUMBER_OTP) != BSEC_OK) {
-		ERROR("BSEC: PART_NUMBER_OTP Error\n");
-		return -1;
+		panic();
 	}
 
 	part_number = (part_number & PART_NUMBER_OTP_PART_MASK) >>
 		PART_NUMBER_OTP_PART_SHIFT;
 
-	*part_nb = part_number | (dev_id << 16);
+	part_number |= stm32mp_get_chip_dev_id() << 16;
 
-	return 0;
+	return part_number;
 }
 
-static int get_cpu_package(uint32_t *cpu_package)
+static uint32_t get_cpu_package(void)
 {
 	uint32_t package;
 
 	if (bsec_shadow_read_otp(&package, PACKAGE_OTP) != BSEC_OK) {
-		ERROR("BSEC: PACKAGE_OTP Error\n");
-		return -1;
+		panic();
 	}
 
-	*cpu_package = (package & PACKAGE_OTP_PKG_MASK) >>
+	package = (package & PACKAGE_OTP_PKG_MASK) >>
 		PACKAGE_OTP_PKG_SHIFT;
 
-	return 0;
+	return package;
 }
 
-void stm32mp_print_cpuinfo(void)
+void stm32mp_get_soc_name(char name[STM32_SOC_NAME_SIZE])
 {
-	const char *cpu_s, *cpu_r, *pkg;
-	uint32_t part_number;
-	uint32_t cpu_package;
-	uint32_t chip_dev_id;
-	int ret;
+	char *cpu_s, *cpu_r, *pkg;
 
 	/* MPUs Part Numbers */
-	ret = get_part_number(&part_number);
-	if (ret < 0) {
-		WARN("Cannot get part number\n");
-		return;
-	}
-
-	switch (part_number) {
+	switch (get_part_number()) {
 	case STM32MP157C_PART_NB:
 		cpu_s = "157C";
 		break;
@@ -158,19 +235,31 @@ void stm32mp_print_cpuinfo(void)
 	case STM32MP151A_PART_NB:
 		cpu_s = "151A";
 		break;
+	case STM32MP157F_PART_NB:
+		cpu_s = "157F";
+		break;
+	case STM32MP157D_PART_NB:
+		cpu_s = "157D";
+		break;
+	case STM32MP153F_PART_NB:
+		cpu_s = "153F";
+		break;
+	case STM32MP153D_PART_NB:
+		cpu_s = "153D";
+		break;
+	case STM32MP151F_PART_NB:
+		cpu_s = "151F";
+		break;
+	case STM32MP151D_PART_NB:
+		cpu_s = "151D";
+		break;
 	default:
 		cpu_s = "????";
 		break;
 	}
 
 	/* Package */
-	ret = get_cpu_package(&cpu_package);
-	if (ret < 0) {
-		WARN("Cannot get CPU package\n");
-		return;
-	}
-
-	switch (cpu_package) {
+	switch (get_cpu_package()) {
 	case PKG_AA_LFBGA448:
 		pkg = "AA";
 		break;
@@ -189,22 +278,28 @@ void stm32mp_print_cpuinfo(void)
 	}
 
 	/* REVISION */
-	ret = stm32mp1_dbgmcu_get_chip_version(&chip_dev_id);
-	if (ret < 0) {
-		WARN("Cannot get CPU version\n");
-		return;
-	}
-
-	switch (chip_dev_id) {
+	switch (stm32mp_get_chip_version()) {
 	case STM32MP1_REV_B:
 		cpu_r = "B";
+		break;
+	case STM32MP1_REV_Z:
+		cpu_r = "Z";
 		break;
 	default:
 		cpu_r = "?";
 		break;
 	}
 
-	NOTICE("CPU: STM32MP%s%s Rev.%s\n", cpu_s, pkg, cpu_r);
+	snprintf(name, STM32_SOC_NAME_SIZE,
+		 "STM32MP%s%s Rev.%s", cpu_s, pkg, cpu_r);
+}
+
+void stm32mp_print_cpuinfo(void)
+{
+	char name[STM32_SOC_NAME_SIZE];
+
+	stm32mp_get_soc_name(name);
+	NOTICE("CPU: %s\n", name);
 }
 
 void stm32mp_print_boardinfo(void)
@@ -246,9 +341,10 @@ void stm32mp_print_boardinfo(void)
 
 		rev[0] = BOARD_ID2REV(board_id) - 1 + 'A';
 		rev[1] = '\0';
-		NOTICE("Board: MB%04x Var%d Rev.%s-%02d\n",
+		NOTICE("Board: MB%04x Var%u.%u Rev.%s-%02u\n",
 		       BOARD_ID2NB(board_id),
-		       BOARD_ID2VAR(board_id),
+		       BOARD_ID2VARCPN(board_id),
+		       BOARD_ID2VARFG(board_id),
 		       rev,
 		       BOARD_ID2BOM(board_id));
 	}
@@ -257,25 +353,15 @@ void stm32mp_print_boardinfo(void)
 /* Return true when SoC provides a single Cortex-A7 core, and false otherwise */
 bool stm32mp_is_single_core(void)
 {
-	uint32_t part_number;
-	bool ret = false;
-
-	if (get_part_number(&part_number) < 0) {
-		ERROR("Invalid part number, assume single core chip");
-		return true;
-	}
-
-	switch (part_number) {
+	switch (get_part_number()) {
 	case STM32MP151A_PART_NB:
 	case STM32MP151C_PART_NB:
-		ret = true;
-		break;
-
+	case STM32MP151D_PART_NB:
+	case STM32MP151F_PART_NB:
+		return true;
 	default:
-		break;
+		return false;
 	}
-
-	return ret;
 }
 
 /* Return true when device is in closed state */
@@ -365,3 +451,26 @@ uint32_t stm32_iwdg_shadow_update(uint32_t iwdg_inst, uint32_t flags)
 	return BSEC_OK;
 }
 #endif
+
+#if STM32MP_USE_STM32IMAGE
+/* Get the non-secure DDR size */
+uint32_t stm32mp_get_ddr_ns_size(void)
+{
+	static uint32_t ddr_ns_size;
+	uint32_t ddr_size;
+
+	if (ddr_ns_size != 0U) {
+		return ddr_ns_size;
+	}
+
+	ddr_size = dt_get_ddr_size();
+	if ((ddr_size <= (STM32MP_DDR_S_SIZE + STM32MP_DDR_SHMEM_SIZE)) ||
+	    (ddr_size > STM32MP_DDR_MAX_SIZE)) {
+		panic();
+	}
+
+	ddr_ns_size = ddr_size - (STM32MP_DDR_S_SIZE + STM32MP_DDR_SHMEM_SIZE);
+
+	return ddr_ns_size;
+}
+#endif /* STM32MP_USE_STM32IMAGE */

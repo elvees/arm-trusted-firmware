@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2018, ARM Limited and Contributors. All rights reserved.
+ * Copyright (c) 2013-2020, ARM Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -61,8 +61,10 @@
 
 #if LOG_LEVEL >= LOG_LEVEL_ERROR
 # define ERROR(...)	tf_log(LOG_MARKER_ERROR __VA_ARGS__)
+# define ERROR_NL()	tf_log_newline(LOG_MARKER_ERROR)
 #else
 # define ERROR(...)	no_tf_log(LOG_MARKER_ERROR __VA_ARGS__)
+# define ERROR_NL()
 #endif
 
 #if LOG_LEVEL >= LOG_LEVEL_NOTICE
@@ -91,6 +93,7 @@
 
 #if ENABLE_BACKTRACE
 void backtrace(const char *cookie);
+const char *get_el_str(unsigned int el);
 #else
 #define backtrace(x)
 #endif
@@ -100,7 +103,7 @@ void __dead2 do_panic(void);
 #define panic()				\
 	do {				\
 		backtrace(__func__);	\
-		(void)console_flush();	\
+		console_flush();	\
 		do_panic();		\
 	} while (false)
 
@@ -108,6 +111,7 @@ void __dead2 do_panic(void);
 void __dead2 __stack_chk_fail(void);
 
 void tf_log(const char *fmt, ...) __printflike(1, 2);
+void tf_log_newline(const char log_fmt[2]);
 void tf_log_set_max_level(unsigned int log_level);
 
 #endif /* __ASSEMBLER__ */

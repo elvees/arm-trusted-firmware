@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2016, ARM Limited and Contributors. All rights reserved.
+ * Copyright (c) 2013-2019, ARM Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -100,9 +100,8 @@ static void zynqmp_pwr_domain_on_finish(const psci_power_state_t *target_state)
 	for (size_t i = 0; i <= PLAT_MAX_PWR_LVL; i++)
 		VERBOSE("%s: target_state->pwr_domain_state[%lu]=%x\n",
 			__func__, i, target_state->pwr_domain_state[i]);
-
+	plat_arm_gic_pcpu_init();
 	gicv2_cpuif_enable();
-	gicv2_pcpu_distif_init();
 }
 
 static void zynqmp_pwr_domain_suspend_finish(const psci_power_state_t *target_state)
@@ -180,14 +179,6 @@ int zynqmp_validate_power_state(unsigned int power_state,
 	return PSCI_E_SUCCESS;
 }
 
-int zynqmp_validate_ns_entrypoint(unsigned long ns_entrypoint)
-{
-	VERBOSE("%s: ns_entrypoint: 0x%lx\n", __func__, ns_entrypoint);
-
-	/* FIXME: Actually validate */
-	return PSCI_E_SUCCESS;
-}
-
 void zynqmp_get_sys_suspend_power_state(psci_power_state_t *req_state)
 {
 	req_state->pwr_domain_state[PSCI_CPU_PWR_LVL] = PLAT_MAX_OFF_STATE;
@@ -207,7 +198,6 @@ static const struct plat_psci_ops zynqmp_psci_ops = {
 	.system_off			= zynqmp_system_off,
 	.system_reset			= zynqmp_system_reset,
 	.validate_power_state		= zynqmp_validate_power_state,
-	.validate_ns_entrypoint		= zynqmp_validate_ns_entrypoint,
 	.get_sys_suspend_power_state	= zynqmp_get_sys_suspend_power_state,
 };
 

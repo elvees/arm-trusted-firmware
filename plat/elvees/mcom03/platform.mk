@@ -28,9 +28,10 @@ PLAT_BL_COMMON_SOURCES	+=	$(PLAT_PATH)/helpers.S			\
 				drivers/delay_timer/generic_delay_timer.c \
 				${XLAT_TABLES_LIB_SRCS}
 
-BL31_SOURCES		+=	drivers/arm/gic/common/gic_common.c	\
-				drivers/arm/gic/v3/gicv3_helpers.c	\
-				drivers/arm/gic/v3/gicv3_main.c		\
+# Include GICv3 driver files
+include drivers/arm/gic/v3/gicv3.mk
+
+BL31_SOURCES		+=	${GICV3_SOURCES}	\
 				lib/cpus/aarch64/cortex_a53.S		\
 				plat/common/plat_gicv3.c		\
 				plat/common/plat_psci_common.c		\

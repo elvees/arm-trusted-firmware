@@ -14,9 +14,19 @@ To build:
 make RESET_TO_BL31=1 CROSS_COMPILE=aarch64-none-elf- PLAT=versal bl31
 ```
 
-To build ATF for different platform (for now its just versal virtual "versal_virt")
+To build ATF for different platform (supported are "silicon"(default) and "versal_virt")
 ```bash
 make RESET_TO_BL31=1 CROSS_COMPILE=aarch64-none-elf- PLAT=versal VERSAL_PLATFORM=versal_virt bl31
+```
+
+To build TF-A for JTAG DCC console
+```bash
+make RESET_TO_BL31=1 CROSS_COMPILE=aarch64-none-elf- PLAT=versal bl31 VERSAL_CONSOLE=dcc
+```
+
+To build TF-A with Straight-Line Speculation(SLS)
+```bash
+make RESET_TO_BL31=1 CROSS_COMPILE=aarch64-none-elf- PLAT=versal bl31 HARDEN_SLS_ALL=1
 ```
 
 Xilinx Versal platform specific build options
@@ -33,3 +43,11 @@ Xilinx Versal platform specific build options
 
 *   `VERSAL_PLATFORM`: Select the platform. Options:
     -   `versal_virt`	: Versal Virtual platform
+
+# PLM->TF-A Parameter Passing
+------------------------------
+The PLM populates a data structure with image information for the TF-A. The TF-A
+uses that data to hand off to the loaded images. The address of the handoff
+data structure is passed in the ```PMC_GLOBAL_GLOB_GEN_STORAGE4``` register.
+The register is free to be used by other software once the TF-A is bringing up
+further firmware images.

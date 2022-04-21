@@ -15,7 +15,7 @@
 #include <drivers/marvell/mochi/ap_setup.h>
 #include <lib/mmio.h>
 
-#include <mvebu_def.h>
+#include <a8k_plat_def.h>
 
 #define SMMU_sACR				(MVEBU_SMMU_BASE + 0x10)
 #define SMMU_sACR_PG_64K			(1 << 16)
@@ -27,9 +27,6 @@
 #define CCU_HTC_CR				(MVEBU_CCU_BASE(MVEBU_AP0) + \
 							0x200)
 #define CCU_SET_POC_OFFSET			5
-
-#define CCU_RGF(win)				(MVEBU_CCU_BASE(MVEBU_AP0) + \
-							0x90 + 4 * (win))
 
 #define DSS_CR0					(MVEBU_RFU_BASE + 0x100)
 #define DVM_48BIT_VA_ENABLE			(1 << 21)
@@ -44,6 +41,14 @@
 						 SEC_MOCHI_IN_ACC_IHB1_EN | \
 						 SEC_MOCHI_IN_ACC_IHB2_EN | \
 						 SEC_MOCHI_IN_ACC_PIDI_EN)
+#define MOCHI_IN_ACC_LEVEL_FORCE_NONSEC		(0)
+#define MOCHI_IN_ACC_LEVEL_FORCE_SEC		(1)
+#define MOCHI_IN_ACC_LEVEL_LEAVE_ORIG		(2)
+#define MOCHI_IN_ACC_LEVEL_MASK_ALL		(3)
+#define SEC_MOCHI_IN_ACC_IHB0_LEVEL(l)		((l) << 1)
+#define SEC_MOCHI_IN_ACC_IHB1_LEVEL(l)		((l) << 4)
+#define SEC_MOCHI_IN_ACC_PIDI_LEVEL(l)		((l) << 10)
+
 
 /* SYSRST_OUTn Config definitions */
 #define MVEBU_SYSRST_OUT_CONFIG_REG		(MVEBU_MISC_SOC_BASE + 0x4)
@@ -62,6 +67,23 @@
 #define MVEBU_AXI_ATTR_REG(index)		(MVEBU_AXI_ATTR_BASE + \
 							0x4 * index)
 
+#define XOR_STREAM_ID_REG(ch)	(MVEBU_REGS_BASE + 0x410010 + (ch) * 0x20000)
+#define XOR_STREAM_ID_MASK	0xFFFF
+#define SDIO_STREAM_ID_REG	(MVEBU_RFU_BASE + 0x4600)
+#define SDIO_STREAM_ID_MASK	0xFF
+
+/* Do not use the default Stream ID 0 */
+#define A806_STREAM_ID_BASE	(0x1)
+
+static uintptr_t stream_id_reg[] = {
+	XOR_STREAM_ID_REG(0),
+	XOR_STREAM_ID_REG(1),
+	XOR_STREAM_ID_REG(2),
+	XOR_STREAM_ID_REG(3),
+	SDIO_STREAM_ID_REG,
+	0
+};
+
 enum axi_attr {
 	AXI_SDIO_ATTR = 0,
 	AXI_DFX_ATTR,
@@ -70,19 +92,36 @@ enum axi_attr {
 
 static void apn_sec_masters_access_en(uint32_t enable)
 {
-	uint32_t reg;
-
 	/* Open/Close incoming access for all masters.
 	 * The access is disabled in trusted boot mode
 	 * Could only be done in EL3
 	 */
-	reg = mmio_read_32(SEC_MOCHI_IN_ACC_REG);
-	if (enable)
-		mmio_write_32(SEC_MOCHI_IN_ACC_REG, reg |
+	if (enable != 0) {
+		mmio_clrsetbits_32(SEC_MOCHI_IN_ACC_REG, 0x0U, /* no clear */
 			      SEC_IN_ACCESS_ENA_ALL_MASTERS);
-	else
-		mmio_write_32(SEC_MOCHI_IN_ACC_REG, reg &
-			      ~SEC_IN_ACCESS_ENA_ALL_MASTERS);
+#if LLC_SRAM
+		/* Do not change access security level
+		 * for PIDI masters
+		 */
+		mmio_clrsetbits_32(SEC_MOCHI_IN_ACC_REG,
+				   SEC_MOCHI_IN_ACC_PIDI_LEVEL(
+					  MOCHI_IN_ACC_LEVEL_MASK_ALL),
+				   SEC_MOCHI_IN_ACC_PIDI_LEVEL(
+					  MOCHI_IN_ACC_LEVEL_LEAVE_ORIG));
+#endif
+	} else {
+		mmio_clrsetbits_32(SEC_MOCHI_IN_ACC_REG,
+				   SEC_IN_ACCESS_ENA_ALL_MASTERS,
+				   0x0U /* no set */);
+#if LLC_SRAM
+		/* Return PIDI access level to the default */
+		mmio_clrsetbits_32(SEC_MOCHI_IN_ACC_REG,
+				   SEC_MOCHI_IN_ACC_PIDI_LEVEL(
+					  MOCHI_IN_ACC_LEVEL_MASK_ALL),
+				   SEC_MOCHI_IN_ACC_PIDI_LEVEL(
+					  MOCHI_IN_ACC_LEVEL_FORCE_NONSEC));
+#endif
+	}
 }
 
 static void setup_smmu(void)
@@ -93,20 +132,6 @@ static void setup_smmu(void)
 	reg = mmio_read_32(SMMU_sACR);
 	reg |= SMMU_sACR_PG_64K;
 	mmio_write_32(SMMU_sACR, reg);
-}
-
-static void apn806_errata_wa_init(void)
-{
-	/*
-	 * ERRATA ID: RES-3033912 - Internal Address Space Init state causes
-	 * a hang upon accesses to [0xf070_0000, 0xf07f_ffff]
-	 * Workaround: Boot Firmware (ATF) should configure CCU_RGF_WIN(4) to
-	 * split [0x6e_0000, 0xff_ffff] to values [0x6e_0000, 0x6f_ffff] and
-	 * [0x80_0000, 0xff_ffff] that cause accesses to the
-	 * segment of [0xf070_0000, 0xf07f_ffff] to act as RAZWI.
-	 */
-	mmio_write_32(CCU_RGF(4), 0x37f9b809);
-	mmio_write_32(CCU_RGF(5), 0x7ffa0009);
 }
 
 static void init_aurora2(void)
@@ -131,7 +156,7 @@ static void init_aurora2(void)
 	mmio_write_32(CCU_HTC_CR, reg);
 #endif /* LLC_ENABLE */
 
-	apn806_errata_wa_init();
+	errata_wa_init();
 }
 
 
@@ -148,6 +173,20 @@ static void mci_remap_indirect_access_base(void)
 		mmio_write_32(MCIX4_REG_START_ADDRESS_REG(mci),
 			      MVEBU_MCI_REG_BASE_REMAP(mci) >>
 			      MCI_REMAP_OFF_SHIFT);
+}
+
+/* Set a unique stream id for all DMA capable devices */
+static void ap806_stream_id_init(void)
+{
+	int i;
+
+	for (i = 0; stream_id_reg[i] != 0; i++) {
+		uint32_t mask = stream_id_reg[i] == SDIO_STREAM_ID_REG ?
+				SDIO_STREAM_ID_MASK : XOR_STREAM_ID_MASK;
+
+		mmio_clrsetbits_32(stream_id_reg[i], mask,
+				   i + A806_STREAM_ID_BASE);
+	}
 }
 
 static void apn806_axi_attr_init(void)
@@ -228,6 +267,9 @@ void ap_init(void)
 	/* configure DSS */
 	dss_setup();
 
+	/* Set the stream IDs for DMA masters */
+	ap806_stream_id_init();
+
 	/* configure the SMMU */
 	setup_smmu();
 
@@ -250,3 +292,6 @@ int ap_get_count(void)
 	return 1;
 }
 
+void update_cp110_default_win(int cp_id)
+{
+}

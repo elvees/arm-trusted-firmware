@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (c) 2019, Arm Limited. All rights reserved.
+# Copyright (c) 2019-2021, Arm Limited. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-3-Clause
 #
@@ -20,13 +20,13 @@ project = 'Trusted Firmware-A'
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ['sphinx.ext.autosectionlabel', 'sphinxcontrib.plantuml']
+extensions = ['myst_parser', 'sphinx.ext.autosectionlabel', 'sphinxcontrib.plantuml']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
 # The suffix(es) of source filenames.
-source_suffix = '.rst'
+source_suffix = ['.md', '.rst']
 
 # The master toctree document.
 master_doc = 'index'
@@ -75,6 +75,14 @@ html_theme_options = {
     'prev_next_buttons_location': 'both', # Top and bottom of the page
     'style_external_links': True # Display an icon next to external links
 }
+
+# Path to _static directory
+html_static_path = ['_static']
+
+# Path to css file relative to html_static_path
+html_css_files = [
+    'css/custom.css',
+]
 
 # -- Options for autosectionlabel --------------------------------------------
 

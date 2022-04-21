@@ -1,12 +1,20 @@
 #
-# Copyright (c) 2019, Linaro Limited and Contributors. All rights reserved.
+# Copyright (c) 2019-2021, Linaro Limited and Contributors. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
+include common/fdt_wrappers.mk
+
 CRASH_REPORTING	:=	1
 
 include lib/libfdt/libfdt.mk
+
+ifeq (${SPM_MM},1)
+NEED_BL32		:=	yes
+EL3_EXCEPTION_HANDLING	:=	1
+GICV2_G0_FOR_EL3	:=	1
+endif
 
 # Enable new version of image loading on QEMU platforms
 LOAD_IMAGE_V2		:=	1
@@ -41,9 +49,9 @@ BL1_SOURCES		+=	drivers/io/io_semihosting.c			\
 				${PLAT_QEMU_COMMON_PATH}/${ARCH}/plat_helpers.S	\
 				${PLAT_QEMU_COMMON_PATH}/qemu_bl1_setup.c
 
-BL1_SOURCES		+=	lib/cpus/aarch64/aem_generic.S			\
-				lib/cpus/aarch64/cortex_a53.S			\
-				lib/cpus/aarch64/cortex_a57.S
+BL1_SOURCES		+=	lib/cpus/aarch64/cortex_a57.S			\
+				lib/cpus/aarch64/cortex_a72.S			\
+				lib/cpus/aarch64/qemu_max.S			\
 
 BL2_SOURCES		+=	drivers/io/io_semihosting.c			\
 				drivers/io/io_storage.c				\
@@ -62,21 +70,31 @@ BL2_SOURCES		+=	${PLAT_QEMU_COMMON_PATH}/qemu_bl2_mem_params_desc.c	\
 				common/desc_image_load.c
 endif
 
-QEMU_GIC_SOURCES	:=	drivers/arm/gic/v3/gicv3_helpers.c		\
-				drivers/arm/gic/v3/gicv3_main.c			\
-				drivers/arm/gic/common/gic_common.c		\
+# Include GICv3 driver files
+include drivers/arm/gic/v3/gicv3.mk
+
+QEMU_GIC_SOURCES	:=	${GICV3_SOURCES}				\
 				plat/common/plat_gicv3.c			\
 				${PLAT_QEMU_COMMON_PATH}/qemu_gicv3.c
 
-BL31_SOURCES		+=	lib/cpus/aarch64/aem_generic.S			\
-				lib/cpus/aarch64/cortex_a53.S			\
-				lib/cpus/aarch64/cortex_a57.S			\
+BL31_SOURCES		+=	lib/cpus/aarch64/cortex_a57.S			\
+				lib/cpus/aarch64/cortex_a72.S			\
+				lib/cpus/aarch64/qemu_max.S			\
+				lib/semihosting/semihosting.c			\
+				lib/semihosting/${ARCH}/semihosting_call.S	\
 				plat/common/plat_psci_common.c			\
-				${PLAT_QEMU_COMMON_PATH}/qemu_pm.c		\
-				${PLAT_QEMU_COMMON_PATH}/topology.c		\
+				${PLAT_QEMU_PATH}/sbsa_pm.c			\
+				${PLAT_QEMU_PATH}/sbsa_topology.c		\
 				${PLAT_QEMU_COMMON_PATH}/aarch64/plat_helpers.S	\
 				${PLAT_QEMU_COMMON_PATH}/qemu_bl31_setup.c	\
+				common/fdt_fixup.c				\
 				${QEMU_GIC_SOURCES}
+
+BL31_SOURCES		+=	${FDT_WRAPPERS_SOURCES}
+
+ifeq (${SPM_MM},1)
+	BL31_SOURCES		+=	${PLAT_QEMU_COMMON_PATH}/qemu_spm.c
+endif
 
 SEPARATE_CODE_AND_RODATA	:= 1
 ENABLE_STACK_PROTECTOR		:= 0
@@ -96,6 +114,14 @@ PRELOADED_BL33_BASE	?= 0x10000000
 # Qemu SBSA plafrom only support SEC_SRAM
 BL32_RAM_LOCATION_ID	= SEC_SRAM_ID
 $(eval $(call add_define,BL32_RAM_LOCATION_ID))
+
+# Don't have the Linux kernel as a BL33 image by default
+ARM_LINUX_KERNEL_AS_BL33	:=	0
+$(eval $(call assert_boolean,ARM_LINUX_KERNEL_AS_BL33))
+$(eval $(call add_define,ARM_LINUX_KERNEL_AS_BL33))
+
+ARM_PRELOADED_DTB_BASE := PLAT_QEMU_DT_BASE
+$(eval $(call add_define,ARM_PRELOADED_DTB_BASE))
 
 # Do not enable SVE
 ENABLE_SVE_FOR_NS	:= 0

@@ -4,6 +4,8 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
+include drivers/arm/gic/v2/gicv2.mk
+
 RK_PLAT			:=	plat/rockchip
 RK_PLAT_SOC		:=	${RK_PLAT}/${PLAT}
 RK_PLAT_COMMON		:=	${RK_PLAT}/common
@@ -22,9 +24,7 @@ PLAT_INCLUDES		:=	-Idrivers/arm/gic/common/			\
 				-I${RK_PLAT_SOC}/drivers/soc/			\
 				-I${RK_PLAT_SOC}/include/
 
-RK_GIC_SOURCES		:=	drivers/arm/gic/common/gic_common.c		\
-				drivers/arm/gic/v2/gicv2_main.c			\
-				drivers/arm/gic/v2/gicv2_helpers.c		\
+RK_GIC_SOURCES		:=	${GICV2_SOURCES}				\
 				plat/common/plat_gicv2.c			\
 				${RK_PLAT}/common/rockchip_gicv2.c
 
@@ -35,6 +35,10 @@ PLAT_BL_COMMON_SOURCES	:=	common/desc_image_load.c			\
 				plat/common/aarch64/crash_console_helpers.S	\
 				plat/common/plat_psci_common.c
 
+ifneq (${ENABLE_STACK_PROTECTOR},0)
+PLAT_BL_COMMON_SOURCES	+=	${RK_PLAT_COMMON}/rockchip_stack_protector.c
+endif
+
 BL31_SOURCES		+=	${RK_GIC_SOURCES}				\
 				drivers/arm/cci/cci.c				\
 				drivers/ti/uart/aarch64/16550_console.S		\
@@ -42,7 +46,6 @@ BL31_SOURCES		+=	${RK_GIC_SOURCES}				\
 				drivers/delay_timer/generic_delay_timer.c	\
 				lib/cpus/aarch64/aem_generic.S			\
 				lib/cpus/aarch64/cortex_a53.S			\
-				${RK_PLAT_COMMON}/drivers/parameter/ddr_parameter.c	\
 				${RK_PLAT_COMMON}/aarch64/plat_helpers.S	\
 				${RK_PLAT_COMMON}/params_setup.c		\
 				${RK_PLAT_COMMON}/bl31_plat_setup.c		\
@@ -53,8 +56,15 @@ BL31_SOURCES		+=	${RK_GIC_SOURCES}				\
 				${RK_PLAT_SOC}/drivers/pmu/pmu.c		\
 				${RK_PLAT_SOC}/drivers/soc/soc.c
 
+ifdef PLAT_RK_SECURE_DDR_MINILOADER
+BL31_SOURCES		+=	${RK_PLAT_COMMON}/drivers/parameter/ddr_parameter.c
+endif
+
 include lib/coreboot/coreboot.mk
 include lib/libfdt/libfdt.mk
+
+# Enable workarounds for selected Cortex-A53 errata
+ERRATA_A53_855873	:=	1
 
 $(eval $(call add_define,PLAT_EXTRA_LD_SCRIPT))
 $(eval $(call add_define,PLAT_SKIP_OPTEE_S_EL1_INT_REGISTER))

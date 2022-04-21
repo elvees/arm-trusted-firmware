@@ -27,7 +27,7 @@
  */
 
 /*
- * Portions copyright (c) 2014, ARM Limited and Contributors.
+ * Portions copyright (c) 2014-2020, ARM Limited and Contributors.
  * All rights reserved.
  */
 
@@ -54,6 +54,18 @@ struct uuid {
 	uint8_t		clock_seq_hi_and_reserved;
 	uint8_t		clock_seq_low;
 	uint8_t		node[_UUID_NODE_LEN];
+};
+
+struct efi_guid {
+	uint32_t time_low;
+	uint16_t time_mid;
+	uint16_t time_hi_and_version;
+	uint8_t clock_seq_and_node[8];
+};
+
+union uuid_helper_t {
+	struct uuid uuid_struct;
+	struct efi_guid efi_guid;
 };
 
 /* XXX namespace pollution? */

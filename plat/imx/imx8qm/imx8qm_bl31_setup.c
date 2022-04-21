@@ -1,10 +1,12 @@
 /*
- * Copyright (c) 2015-2018, ARM Limited and Contributors. All rights reserved.
+ * Copyright (c) 2015-2020, ARM Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
 #include <assert.h>
+#include <inttypes.h>
+#include <stdint.h>
 #include <stdbool.h>
 
 #include <platform_def.h>
@@ -27,12 +29,13 @@
 #include <sci/sci.h>
 #include <sec_rsrc.h>
 
-IMPORT_SYM(unsigned long, __COHERENT_RAM_START__, BL31_COHERENT_RAM_START);
-IMPORT_SYM(unsigned long, __COHERENT_RAM_END__, BL31_COHERENT_RAM_END);
-IMPORT_SYM(unsigned long, __RO_START__, BL31_RO_START);
-IMPORT_SYM(unsigned long, __RO_END__, BL31_RO_END);
+static const unsigned long BL31_COHERENT_RAM_START	= BL_COHERENT_RAM_BASE;
+static const unsigned long BL31_COHERENT_RAM_END	= BL_COHERENT_RAM_END;
+static const unsigned long BL31_RO_START		= BL_CODE_BASE;
+static const unsigned long BL31_RO_END			= BL_CODE_END;
+static const unsigned long BL31_RW_END			= BL_END;
+
 IMPORT_SYM(unsigned long, __RW_START__, BL31_RW_START);
-IMPORT_SYM(unsigned long, __RW_END__, BL31_RW_END);
 
 static entry_point_info_t bl32_image_ep_info;
 static entry_point_info_t bl33_image_ep_info;
@@ -42,6 +45,22 @@ static entry_point_info_t bl33_image_ep_info;
 			(SC_PAD_ISO_OFF << PADRING_LPCONFIG_SHIFT) | \
 			(SC_PAD_28FDSOI_DSE_DV_LOW << PADRING_DSE_SHIFT) | \
 			(SC_PAD_28FDSOI_PS_PD << PADRING_PULL_SHIFT))
+
+#if defined(IMX_USE_UART0)
+#define IMX_RES_UART			SC_R_UART_0
+#define IMX_PAD_UART_RX			SC_P_UART0_RX
+#define IMX_PAD_UART_TX			SC_P_UART0_TX
+#define IMX_PAD_UART_RTS_B		SC_P_UART0_RTS_B
+#define IMX_PAD_UART_CTS_B		SC_P_UART0_CTS_B
+#elif defined(IMX_USE_UART1)
+#define IMX_RES_UART			SC_R_UART_1
+#define IMX_PAD_UART_RX			SC_P_UART1_RX
+#define IMX_PAD_UART_TX			SC_P_UART1_TX
+#define IMX_PAD_UART_RTS_B		SC_P_UART1_RTS_B
+#define IMX_PAD_UART_CTS_B		SC_P_UART1_CTS_B
+#else
+#error "Provide proper UART number in IMX_DEBUG_UART"
+#endif
 
 const static int imx8qm_cci_map[] = {
 	CLUSTER0_CCI_SLVAE_IFACE,
@@ -78,7 +97,7 @@ static void lpuart32_serial_setbrg(unsigned int base, int baudrate)
 	if (baudrate == 0)
 		panic();
 
-	sc_pm_get_clock_rate(ipc_handle, SC_R_UART_0, 2, &rate);
+	sc_pm_get_clock_rate(ipc_handle, IMX_RES_UART, 2, &rate);
 
 	baud_diff = baudrate;
 	osr = 0;
@@ -244,14 +263,14 @@ void mx8_partition_resources(void)
 			err = sc_rm_get_memreg_info(ipc_handle, mr, &start, &end);
 			if (err)
 				ERROR("Memreg get info failed, %u\n", mr);
-			NOTICE("Memreg %u 0x%llx -- 0x%llx\n", mr, start, end);
+			NOTICE("Memreg %u 0x%" PRIx64 " -- 0x%" PRIx64 "\n", mr, start, end);
 			if (BL31_BASE >= start && (BL31_LIMIT - 1) <= end) {
 				mr_record = mr; /* Record the mr for ATF running */
 			} else {
 				err = sc_rm_assign_memreg(ipc_handle, os_part, mr);
 				if (err)
-					ERROR("Memreg assign failed, 0x%llx -- 0x%llx, \
-						err %d\n", start, end, err);
+					ERROR("Memreg assign failed, 0x%" PRIx64 " -- 0x%" PRIx64 ", \
+					      err %d\n", start, end, err);
 			}
 		}
 	}
@@ -263,23 +282,23 @@ void mx8_partition_resources(void)
 		if ((BL31_LIMIT - 1) < end) {
 			err = sc_rm_memreg_alloc(ipc_handle, &mr, BL31_LIMIT, end);
 			if (err)
-				ERROR("sc_rm_memreg_alloc failed, 0x%llx -- 0x%llx\n",
-					(sc_faddr_t)BL31_LIMIT, end);
+				ERROR("sc_rm_memreg_alloc failed, 0x%" PRIx64 " -- 0x%" PRIx64 "\n",
+				      (sc_faddr_t)BL31_LIMIT, end);
 			err = sc_rm_assign_memreg(ipc_handle, os_part, mr);
 			if (err)
-				ERROR("Memreg assign failed, 0x%llx -- 0x%llx\n",
-					(sc_faddr_t)BL31_LIMIT, end);
+				ERROR("Memreg assign failed, 0x%" PRIx64 " -- 0x%" PRIx64 "\n",
+				      (sc_faddr_t)BL31_LIMIT, end);
 		}
 
 		if (start < (BL31_BASE - 1)) {
 			err = sc_rm_memreg_alloc(ipc_handle, &mr, start, BL31_BASE - 1);
 			if (err)
-				ERROR("sc_rm_memreg_alloc failed, 0x%llx -- 0x%llx\n",
-					start, (sc_faddr_t)BL31_BASE - 1);
+				ERROR("sc_rm_memreg_alloc failed, 0x%" PRIx64 " -- 0x%" PRIx64 "\n",
+				      start, (sc_faddr_t)BL31_BASE - 1);
 			err = sc_rm_assign_memreg(ipc_handle, os_part, mr);
 				if (err)
-					ERROR("Memreg assign failed, 0x%llx -- 0x%llx\n",
-						start, (sc_faddr_t)BL31_BASE - 1);
+					ERROR("Memreg assign failed, 0x%" PRIx64 " -- 0x%" PRIx64 "\n",
+					      start, (sc_faddr_t)BL31_BASE - 1);
 		}
 	}
 
@@ -294,22 +313,23 @@ void bl31_early_platform_setup2(u_register_t arg0, u_register_t arg1,
 				u_register_t arg2, u_register_t arg3)
 {
 #if DEBUG_CONSOLE
-	static console_lpuart_t console;
+	static console_t console;
 #endif
 	if (sc_ipc_open(&ipc_handle, SC_IPC_BASE) != SC_ERR_NONE)
 		panic();
 
 #if DEBUG_CONSOLE_A53
-	sc_pm_set_resource_power_mode(ipc_handle, SC_R_UART_0, SC_PM_PW_MODE_ON);
+	sc_pm_set_resource_power_mode(ipc_handle, IMX_RES_UART,
+				      SC_PM_PW_MODE_ON);
 	sc_pm_clock_rate_t rate = 80000000;
-	sc_pm_set_clock_rate(ipc_handle, SC_R_UART_0, 2, &rate);
-	sc_pm_clock_enable(ipc_handle, SC_R_UART_0, 2, true, false);
+	sc_pm_set_clock_rate(ipc_handle, IMX_RES_UART, 2, &rate);
+	sc_pm_clock_enable(ipc_handle, IMX_RES_UART, 2, true, false);
 
 	/* configure UART pads */
-	sc_pad_set(ipc_handle, SC_P_UART0_RX, UART_PAD_CTRL);
-	sc_pad_set(ipc_handle, SC_P_UART0_TX, UART_PAD_CTRL);
-	sc_pad_set(ipc_handle, SC_P_UART0_RTS_B, UART_PAD_CTRL);
-	sc_pad_set(ipc_handle, SC_P_UART0_CTS_B, UART_PAD_CTRL);
+	sc_pad_set(ipc_handle, IMX_PAD_UART_RX, UART_PAD_CTRL);
+	sc_pad_set(ipc_handle, IMX_PAD_UART_TX, UART_PAD_CTRL);
+	sc_pad_set(ipc_handle, IMX_PAD_UART_RTS_B, UART_PAD_CTRL);
+	sc_pad_set(ipc_handle, IMX_PAD_UART_CTS_B, UART_PAD_CTRL);
 	lpuart32_serial_init(IMX_BOOT_UART_BASE);
 #endif
 

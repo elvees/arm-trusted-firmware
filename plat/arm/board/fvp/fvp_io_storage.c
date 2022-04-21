@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2018, ARM Limited and Contributors. All rights reserved.
+ * Copyright (c) 2014-2020, ARM Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -20,6 +20,10 @@
 #define BL32_IMAGE_NAME			"bl32.bin"
 #define BL33_IMAGE_NAME			"bl33.bin"
 #define TB_FW_CONFIG_NAME		"fvp_tb_fw_config.dtb"
+#define SOC_FW_CONFIG_NAME		"fvp_soc_fw_config.dtb"
+#define TOS_FW_CONFIG_NAME		"fvp_tsp_fw_config.dtb"
+#define NT_FW_CONFIG_NAME		"fvp_nt_fw_config.dtb"
+#define FW_CONFIG_NAME			"fvp_fw_config.dtb"
 #define HW_CONFIG_NAME			"hw_config.dtb"
 
 #if TRUSTED_BOARD_BOOT
@@ -56,6 +60,22 @@ static const io_file_spec_t sh_file_spec[] = {
 	},
 	[TB_FW_CONFIG_ID] = {
 		.path = TB_FW_CONFIG_NAME,
+		.mode = FOPEN_MODE_RB
+	},
+	[SOC_FW_CONFIG_ID] = {
+		.path = SOC_FW_CONFIG_NAME,
+		.mode = FOPEN_MODE_RB
+	},
+	[TOS_FW_CONFIG_ID] = {
+		.path = TOS_FW_CONFIG_NAME,
+		.mode = FOPEN_MODE_RB
+	},
+	[NT_FW_CONFIG_ID] = {
+		.path = NT_FW_CONFIG_NAME,
+		.mode = FOPEN_MODE_RB
+	},
+	[FW_CONFIG_ID] = {
+		.path = FW_CONFIG_NAME,
 		.mode = FOPEN_MODE_RB
 	},
 	[HW_CONFIG_ID] = {
@@ -120,18 +140,22 @@ void plat_arm_io_setup(void)
 {
 	int io_result;
 
-	arm_io_setup();
+	io_result = arm_io_setup();
+	if (io_result < 0) {
+		panic();
+	}
 
 	/* Register the additional IO devices on this platform */
 	io_result = register_io_dev_sh(&sh_dev_con);
-	assert(io_result == 0);
+	if (io_result < 0) {
+		panic();
+	}
 
 	/* Open connections to devices and cache the handles */
 	io_result = io_dev_open(sh_dev_con, (uintptr_t)NULL, &sh_dev_handle);
-	assert(io_result == 0);
-
-	/* Ignore improbable errors in release builds */
-	(void)io_result;
+	if (io_result < 0) {
+		panic();
+	}
 }
 
 /*

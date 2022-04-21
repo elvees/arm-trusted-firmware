@@ -1,8 +1,10 @@
 /*
- * Copyright (c) 2013-2019, ARM Limited and Contributors. All rights reserved.
+ * Copyright (c) 2013-2021, ARM Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
+
+#include <platform_def.h>
 
 #include <arch.h>
 #include <asm_macros.S>
@@ -46,6 +48,24 @@
 
 func tsp_entrypoint _align=3
 
+#if ENABLE_PIE
+		/*
+		 * ------------------------------------------------------------
+		 * If PIE is enabled fixup the Global descriptor Table only
+		 * once during primary core cold boot path.
+		 *
+		 * Compile time base address, required for fixup, is calculated
+		 * using "pie_fixup" label present within first page.
+		 * ------------------------------------------------------------
+		 */
+	pie_fixup:
+		ldr	x0, =pie_fixup
+		and	x0, x0, #~(PAGE_SIZE_MASK)
+		mov_imm	x1, (BL32_LIMIT - BL32_BASE)
+		add	x1, x1, x0
+		bl	fixup_gdt_reloc
+#endif /* ENABLE_PIE */
+
 	/* ---------------------------------------------
 	 * Set the exception vector to something sane.
 	 * ---------------------------------------------
@@ -80,11 +100,27 @@ func tsp_entrypoint _align=3
 	 * sections. This is done to safeguard against
 	 * possible corruption of this memory by dirty
 	 * cache lines in a system cache as a result of
-	 * use by an earlier boot loader stage.
+	 * use by an earlier boot loader stage. If PIE
+	 * is enabled however, RO sections including the
+	 * GOT may be modified during pie fixup.
+	 * Therefore, to be on the safe side, invalidate
+	 * the entire image region if PIE is enabled.
 	 * ---------------------------------------------
 	 */
-	adr	x0, __RW_START__
-	adr	x1, __RW_END__
+#if ENABLE_PIE
+#if SEPARATE_CODE_AND_RODATA
+	adrp	x0, __TEXT_START__
+	add	x0, x0, :lo12:__TEXT_START__
+#else
+	adrp	x0, __RO_START__
+	add	x0, x0, :lo12:__RO_START__
+#endif /* SEPARATE_CODE_AND_RODATA */
+#else
+	adrp	x0, __RW_START__
+	add	x0, x0, :lo12:__RW_START__
+#endif /* ENABLE_PIE */
+	adrp	x1, __RW_END__
+	add     x1, x1, :lo12:__RW_END__
 	sub	x1, x1, x0
 	bl	inv_dcache_range
 
@@ -94,13 +130,19 @@ func tsp_entrypoint _align=3
 	 *   - the coherent memory section.
 	 * ---------------------------------------------
 	 */
-	ldr	x0, =__BSS_START__
-	ldr	x1, =__BSS_SIZE__
+	adrp	x0, __BSS_START__
+	add	x0, x0, :lo12:__BSS_START__
+	adrp	x1, __BSS_END__
+	add	x1, x1, :lo12:__BSS_END__
+	sub	x1, x1, x0
 	bl	zeromem
 
 #if USE_COHERENT_MEM
-	ldr	x0, =__COHERENT_RAM_START__
-	ldr	x1, =__COHERENT_RAM_UNALIGNED_SIZE__
+	adrp	x0, __COHERENT_RAM_START__
+	add	x0, x0, :lo12:__COHERENT_RAM_START__
+	adrp	x1, __COHERENT_RAM_END_UNALIGNED__
+	add	x1, x1, :lo12:__COHERENT_RAM_END_UNALIGNED__
+	sub	x1, x1, x0
 	bl	zeromem
 #endif
 

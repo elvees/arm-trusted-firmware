@@ -1,11 +1,10 @@
 /*
- * Copyright (c) 2013-2019, ARM Limited and Contributors. All rights reserved.
+ * Copyright (c) 2013-2021, ARM Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
 #include <assert.h>
-#include <errno.h>
 
 #include <arch_helpers.h>
 #include <common/debug.h>
@@ -16,7 +15,6 @@
 #include <lib/psci/psci.h>
 #include <plat/arm/common/arm_config.h>
 #include <plat/arm/common/plat_arm.h>
-#include <plat/common/platform.h>
 #include <platform_def.h>
 
 #include "fvp_private.h"
@@ -65,6 +63,25 @@ static void fvp_cluster_pwrdwn_common(void)
 
 	/* Disable coherency if this cluster is to be turned off */
 	fvp_interconnect_disable();
+
+#if HW_ASSISTED_COHERENCY
+	uint32_t reg;
+
+	/*
+	 * If we have determined this core to be the last man standing and we
+	 * intend to power down the cluster proactively, we provide a hint to
+	 * the power controller that cluster power is not required when all
+	 * cores are powered down.
+	 * Note that this is only an advisory to power controller and is supported
+	 * by SoCs with DynamIQ Shared Units only.
+	 */
+	reg = read_clusterpwrdn();
+
+	/* Clear and set bit 0 : Cluster power not required */
+	reg &= ~DSU_CLUSTER_PWR_MASK;
+	reg |= DSU_CLUSTER_PWR_OFF;
+	write_clusterpwrdn(reg);
+#endif
 
 	/* Program the power controller to turn the cluster off */
 	fvp_pwrc_write_pcoffr(mpidr);
@@ -121,21 +138,37 @@ static void fvp_power_domain_on_finish_common(const psci_power_state_t *target_s
 	fvp_pwrc_clr_wen(mpidr);
 }
 
-
 /*******************************************************************************
  * FVP handler called when a CPU is about to enter standby.
  ******************************************************************************/
 static void fvp_cpu_standby(plat_local_state_t cpu_state)
 {
+	u_register_t scr = read_scr_el3();
 
 	assert(cpu_state == ARM_LOCAL_STATE_RET);
 
 	/*
-	 * Enter standby state
-	 * dsb is good practice before using wfi to enter low power states
+	 * Enable the Non-secure interrupt to wake the CPU.
+	 * In GICv3 affinity routing mode, the Non-secure Group 1 interrupts
+	 * use Physical FIQ at EL3 whereas in GICv2, Physical IRQ is used.
+	 * Enabling both the bits works for both GICv2 mode and GICv3 affinity
+	 * routing mode.
+	 */
+	write_scr_el3(scr | SCR_IRQ_BIT | SCR_FIQ_BIT);
+	isb();
+
+	/*
+	 * Enter standby state.
+	 * dsb is good practice before using wfi to enter low power states.
 	 */
 	dsb();
 	wfi();
+
+	/*
+	 * Restore SCR_EL3 to the original value, synchronisation of SCR_EL3
+	 * is done by eret in el3_exit() to save some execution cycles.
+	 */
+	write_scr_el3(scr);
 }
 
 /*******************************************************************************

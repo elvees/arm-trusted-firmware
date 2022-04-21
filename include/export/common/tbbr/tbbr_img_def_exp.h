@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, ARM Limited and Contributors. All rights reserved.
+ * Copyright (c) 2019-2021, ARM Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -85,7 +85,26 @@
 /* Binary with STM32 header */
 #define STM32_IMAGE_ID			U(29)
 
-/* Define size of the array */
-#define MAX_NUMBER_IDS			U(30)
+/* Encrypted image identifier */
+#define ENC_IMAGE_ID			U(30)
+
+/* FW_CONFIG */
+#define FW_CONFIG_ID			U(31)
+
+/*
+ * Primary FWU metadata image ID
+ */
+#define FWU_METADATA_IMAGE_ID		U(32)
+
+/*
+ * Backup FWU metadata image ID
+ */
+#define BKUP_FWU_METADATA_IMAGE_ID	U(33)
+
+/* Realm Monitor Manager (RMM) */
+#define RMM_IMAGE_ID			U(34)
+
+/* Max Images */
+#define MAX_IMAGE_IDS			U(35)
 
 #endif /* ARM_TRUSTED_FIRMWARE_EXPORT_COMMON_TBBR_TBBR_IMG_DEF_EXP_H */

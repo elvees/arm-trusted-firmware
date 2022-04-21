@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, ARM Limited and Contributors. All rights reserved.
+ * Copyright (c) 2018-2021, ARM Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -20,14 +20,16 @@ static int mmc_dev_open(const uintptr_t init_params, io_dev_info_t **dev_info);
 static int mmc_block_open(io_dev_info_t *dev_info, const uintptr_t spec,
 			  io_entity_t *entity);
 static int mmc_dev_init(io_dev_info_t *dev_info, const uintptr_t init_params);
-static int mmc_block_seek(io_entity_t *entity, int mode, ssize_t offset);
+static int mmc_block_seek(io_entity_t *entity, int mode,
+			  signed long long offset);
 static int mmc_block_read(io_entity_t *entity, uintptr_t buffer, size_t length,
 			  size_t *length_read);
 static int mmc_block_close(io_entity_t *entity);
 static int mmc_dev_close(io_dev_info_t *dev_info);
 static io_type_t device_type_mmc(void);
 
-static ssize_t seek_offset;
+static signed long long seek_offset;
+static size_t (*_read_blocks)(int lba, uintptr_t buf, size_t size);
 
 static const io_dev_connector_t mmc_dev_connector = {
 	.dev_open = mmc_dev_open
@@ -59,8 +61,14 @@ static io_type_t device_type_mmc(void)
 /* Open a connection to the mmc device */
 static int mmc_dev_open(const uintptr_t init_params, io_dev_info_t **dev_info)
 {
+	struct io_mmc_dev_spec *device_spec =
+		(struct io_mmc_dev_spec *)init_params;
+
 	assert(dev_info != NULL);
 	*dev_info = (io_dev_info_t *)&mmc_dev_info;
+
+	_read_blocks = !device_spec->use_boot_part ?
+		mmc_read_blocks : mmc_boot_part_read_blocks;
 
 	return 0;
 }
@@ -85,7 +93,8 @@ static int mmc_block_open(io_dev_info_t *dev_info, const  uintptr_t spec,
 }
 
 /* Seek to a particular file offset on the mmc device */
-static int mmc_block_seek(io_entity_t *entity, int mode, ssize_t offset)
+static int mmc_block_seek(io_entity_t *entity, int mode,
+			  signed long long offset)
 {
 	seek_offset = offset;
 	return 0;
@@ -95,14 +104,21 @@ static int mmc_block_seek(io_entity_t *entity, int mode, ssize_t offset)
 static int mmc_block_read(io_entity_t *entity, uintptr_t buffer,
 			  size_t length, size_t *length_read)
 {
-	*length_read = mmc_read_blocks(seek_offset / MMC_BLOCK_SIZE,
-				       buffer, length);
+	uint8_t retries;
 
-	if (*length_read != length) {
-		return -EIO;
+	for (retries = 0U; retries < 3U; retries++) {
+		*length_read = _read_blocks(seek_offset / MMC_BLOCK_SIZE,
+					    buffer, length);
+
+		if (*length_read == length) {
+			return 0;
+		}
+		WARN("%s: length_read = %lu (!= %lu), retry %u\n", __func__,
+		     (unsigned long)*length_read, (unsigned long)length,
+		     retries + 1U);
 	}
 
-	return 0;
+	return -EIO;
 }
 
 /* Close a file on the mmc device */

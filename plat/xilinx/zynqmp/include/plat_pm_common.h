@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2018, ARM Limited and Contributors. All rights reserved.
+ * Copyright (c) 2013-2020, ARM Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -16,8 +16,6 @@
 #include <common/debug.h>
 #include "pm_defs.h"
 
-#define PAYLOAD_ARG_CNT		6U
-#define PAYLOAD_ARG_SIZE	4U	/* size in bytes */
 
 #define ZYNQMP_TZ_VERSION_MAJOR		1
 #define ZYNQMP_TZ_VERSION_MINOR		0

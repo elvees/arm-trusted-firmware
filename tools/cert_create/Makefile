@@ -1,67 +1,67 @@
 #
-# Copyright (c) 2015-2018, ARM Limited and Contributors. All rights reserved.
+# Copyright (c) 2015-2021, ARM Limited and Contributors. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-PROJECT		:= cert_create
 PLAT		:= none
 V		?= 0
 DEBUG		:= 0
-BINARY		:= ${PROJECT}${BIN_EXT}
+CRTTOOL		?= cert_create${BIN_EXT}
+BINARY		:= $(notdir ${CRTTOOL})
 OPENSSL_DIR	:= /usr
-USE_TBBR_DEFS   := 1
-
-OBJECTS := src/cert.o \
-           src/cmd_opt.o \
-           src/ext.o \
-           src/key.o \
-           src/main.o \
-           src/sha.o \
-           src/tbbr/tbb_cert.o \
-           src/tbbr/tbb_ext.o \
-           src/tbbr/tbb_key.o
-
-HOSTCCFLAGS := -Wall -std=c99
+COT		:= tbbr
 
 MAKE_HELPERS_DIRECTORY := ../../make_helpers/
 include ${MAKE_HELPERS_DIRECTORY}build_macros.mk
 include ${MAKE_HELPERS_DIRECTORY}build_env.mk
 
-ifeq (${USE_TBBR_DEFS},1)
-# In this case, cert_tool is platform-independent
-PLAT_MSG		:=	TBBR Generic
-PLAT_INCLUDE		:=	../../include/tools_share
-else
-PLAT_MSG		:=	${PLAT}
-
-TF_PLATFORM_ROOT		:=	../../plat/
+ifneq (${PLAT},none)
+TF_PLATFORM_ROOT	:=	../../plat/
 include ${MAKE_HELPERS_DIRECTORY}plat_helpers.mk
-
-PLAT_INCLUDE		:=	$(wildcard ${PLAT_DIR}include)
-
-ifeq ($(PLAT_INCLUDE),)
-  $(error "Error: Invalid platform '${PLAT}' has no include directory.")
+PLAT_CERT_CREATE_HELPER_MK := ${PLAT_DIR}/cert_create_tbbr.mk
 endif
+
+# Common source files.
+OBJECTS := src/cert.o \
+           src/cmd_opt.o \
+           src/ext.o \
+           src/key.o \
+           src/main.o \
+           src/sha.o
+
+# Chain of trust.
+ifeq (${COT},tbbr)
+  include src/tbbr/tbbr.mk
+else ifeq (${COT},dualroot)
+  include src/dualroot/cot.mk
+else
+  $(error Unknown chain of trust ${COT})
 endif
+
+ifneq (,$(wildcard ${PLAT_CERT_CREATE_HELPER_MK}))
+include ${PLAT_CERT_CREATE_HELPER_MK}
+endif
+
+HOSTCCFLAGS := -Wall -std=c99
 
 ifeq (${DEBUG},1)
   HOSTCCFLAGS += -g -O0 -DDEBUG -DLOG_LEVEL=40
 else
   HOSTCCFLAGS += -O2 -DLOG_LEVEL=20
 endif
+
 ifeq (${V},0)
   Q := @
 else
   Q :=
 endif
 
-$(eval $(call add_define,USE_TBBR_DEFS))
 HOSTCCFLAGS += ${DEFINES}
 
 # Make soft links and include from local directory otherwise wrong headers
 # could get pulled in from firmware tree.
-INC_DIR := -I ./include -I ${PLAT_INCLUDE} -I ${OPENSSL_DIR}/include
+INC_DIR += -I ./include -I ${PLAT_INCLUDE} -I ${OPENSSL_DIR}/include
 LIB_DIR := -L ${OPENSSL_DIR}/lib
 LIB := -lssl -lcrypto
 
@@ -69,7 +69,7 @@ HOSTCC ?= gcc
 
 .PHONY: all clean realclean
 
-all: clean ${BINARY}
+all: ${BINARY}
 
 ${BINARY}: ${OBJECTS} Makefile
 	@echo "  HOSTLD  $@"

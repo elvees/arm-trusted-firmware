@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2017, ARM Limited and Contributors. All rights reserved.
+ * Copyright (c) 2015-2021, ARM Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -29,6 +29,10 @@
 #define SID_REG_BASE			0x2a4a0000
 #define SID_SYSTEM_ID_OFFSET		0x40
 #define SID_SYSTEM_CFG_OFFSET		0x70
+#define SID_NODE_ID_OFFSET		0x60
+#define SID_CHIP_ID_MASK		0xFF
+#define SID_MULTI_CHIP_MODE_MASK	0x100
+#define SID_MULTI_CHIP_MODE_SHIFT	8
 
 /* The slave_bootsecure controls access to GPU, DMC and CS. */
 #define CSS_NIC400_SLAVE_BOOTSECURE	8
@@ -133,6 +137,8 @@
 #define SSC_DBGCFG_SET		0x14
 #define SSC_DBGCFG_CLR		0x18
 
+#define SPNIDEN_INT_CLR_SHIFT	4
+#define SPNIDEN_SEL_SET_SHIFT	5
 #define SPIDEN_INT_CLR_SHIFT	6
 #define SPIDEN_SEL_SET_SHIFT	7
 
@@ -184,9 +190,6 @@
 
 /* Load address of Non-Secure Image for CSS platform ports */
 #define PLAT_ARM_NS_IMAGE_BASE		U(0xE0000000)
-
-/* TZC related constants */
-#define PLAT_ARM_TZC_FILTERS		TZC_400_REGION_ATTR_FILTER_BIT_ALL
 
 /*
  * Parsing of CPU and Cluster states, as returned by 'Get CSS Power State' SCP

@@ -7,6 +7,9 @@
 
 /* IOW unit device driver for Marvell CP110 and CP115 SoCs */
 
+#include <inttypes.h>
+#include <stdint.h>
+
 #include <arch_helpers.h>
 #include <common/debug.h>
 #include <drivers/marvell/iob.h>
@@ -44,6 +47,10 @@
 #define IOB_WIN_ALR_OFFSET(win)		(iob_base + 0x8 + (0x20 * win))
 #define IOB_WIN_AHR_OFFSET(win)		(iob_base + 0xC + (0x20 * win))
 
+#define IOB_WIN_DIOB_CR_OFFSET(win)	(iob_base + 0x10 + (0x20 * win))
+#define IOB_WIN_XOR0_DIOB_EN		BIT(0)
+#define IOB_WIN_XOR1_DIOB_EN		BIT(1)
+
 uintptr_t iob_base;
 
 static void iob_win_check(struct addr_map_win *win, uint32_t win_num)
@@ -53,7 +60,7 @@ static void iob_win_check(struct addr_map_win *win, uint32_t win_num)
 		win->base_addr = ALIGN_UP(win->base_addr, IOB_WIN_ALIGNMENT);
 		ERROR("Window %d: base address unaligned to 0x%x\n",
 		      win_num, IOB_WIN_ALIGNMENT);
-		printf("Align up the base address to 0x%llx\n",
+		printf("Align up the base address to 0x%" PRIx64 "\n",
 		       win->base_addr);
 	}
 
@@ -62,7 +69,7 @@ static void iob_win_check(struct addr_map_win *win, uint32_t win_num)
 		win->win_size = ALIGN_UP(win->win_size, IOB_WIN_ALIGNMENT);
 		ERROR("Window %d: window size unaligned to 0x%x\n", win_num,
 		      IOB_WIN_ALIGNMENT);
-		printf("Aligning size to 0x%llx\n", win->win_size);
+		printf("Aligning size to 0x%" PRIx64 "\n", win->win_size);
 	}
 }
 
@@ -71,6 +78,17 @@ static void iob_enable_win(struct addr_map_win *win, uint32_t win_id)
 	uint32_t iob_win_reg;
 	uint32_t alr, ahr;
 	uint64_t end_addr;
+	uint32_t reg_en;
+
+	/* move XOR (DMA) to use WIN1 which is used for PCI-EP address space */
+	reg_en = IOB_WIN_XOR0_DIOB_EN | IOB_WIN_XOR1_DIOB_EN;
+	iob_win_reg = mmio_read_32(IOB_WIN_DIOB_CR_OFFSET(0));
+	iob_win_reg &= ~reg_en;
+	mmio_write_32(IOB_WIN_DIOB_CR_OFFSET(0), iob_win_reg);
+
+	iob_win_reg = mmio_read_32(IOB_WIN_DIOB_CR_OFFSET(1));
+	iob_win_reg |= reg_en;
+	mmio_write_32(IOB_WIN_DIOB_CR_OFFSET(1), iob_win_reg);
 
 	end_addr = (win->base_addr + win->win_size - 1);
 	alr = (uint32_t)((win->base_addr >> ADDRESS_SHIFT) & ADDRESS_MASK);
@@ -115,7 +133,7 @@ static void dump_iob(void)
 				 */
 				end = start + (16 << 20);
 			}
-			printf("iob   %02d %s   0x%016llx 0x%016llx\n",
+			printf("iob   %02d %s   0x%016" PRIx64 " 0x%016" PRIx64 "\n",
 			       win_id, iob_target_name[target_id],
 			       start, end);
 		}

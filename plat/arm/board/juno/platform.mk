@@ -1,12 +1,15 @@
 #
-# Copyright (c) 2013-2019, ARM Limited and Contributors. All rights reserved.
+# Copyright (c) 2013-2021, ARM Limited and Contributors. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-JUNO_GIC_SOURCES	:=	drivers/arm/gic/common/gic_common.c	\
-				drivers/arm/gic/v2/gicv2_main.c		\
-				drivers/arm/gic/v2/gicv2_helpers.c	\
+include common/fdt_wrappers.mk
+
+# Include GICv2 driver files
+include drivers/arm/gic/v2/gicv2.mk
+
+JUNO_GIC_SOURCES	:=	${GICV2_SOURCES}			\
 				plat/common/plat_gicv2.c		\
 				plat/arm/common/arm_gicv2.c
 
@@ -42,6 +45,8 @@ $(eval $(call assert_boolean,JUNO_TZMP1))
 ifeq (${JUNO_TZMP1}, 1)
 $(eval $(call add_define,JUNO_TZMP1))
 endif
+
+TRNG_SUPPORT		:=	1
 
 ifeq (${JUNO_AARCH32_EL3_RUNTIME}, 1)
 # Include BL32 in FIP
@@ -80,6 +85,9 @@ BL31_SOURCES		+=	drivers/cfi/v2m/v2m_flash.c		\
 				lib/cpus/aarch64/cortex_a57.S		\
 				lib/cpus/aarch64/cortex_a72.S		\
 				lib/utils/mem_region.c			\
+				lib/fconf/fconf.c			\
+				lib/fconf/fconf_dyn_cfg_getter.c	\
+				plat/arm/board/juno/juno_bl31_setup.c	\
 				plat/arm/board/juno/juno_pm.c		\
 				plat/arm/board/juno/juno_topology.c	\
 				plat/arm/common/arm_nor_psci_mem_protect.c \
@@ -87,8 +95,15 @@ BL31_SOURCES		+=	drivers/cfi/v2m/v2m_flash.c		\
 				${JUNO_INTERCONNECT_SOURCES}		\
 				${JUNO_SECURITY_SOURCES}
 
+BL31_SOURCES		+=	${FDT_WRAPPERS_SOURCES}
+
 ifeq (${CSS_USE_SCMI_SDS_DRIVER},1)
 BL1_SOURCES		+=	drivers/arm/css/sds/sds.c
+endif
+
+ifeq (${TRUSTED_BOARD_BOOT}, 1)
+BL1_SOURCES		+=	plat/arm/board/juno/juno_trusted_boot.c
+BL2_SOURCES		+=	plat/arm/board/juno/juno_trusted_boot.c
 endif
 
 endif
@@ -102,7 +117,7 @@ ifeq ($(USE_ROMLIB),1)
 all : bl1_romlib.bin
 endif
 
-bl1_romlib.bin : $(BUILD_PLAT)/bl1.bin $(BUILD_PLAT)/romlib/romlib.bin
+bl1_romlib.bin : $(BUILD_PLAT)/bl1.bin romlib.bin
 	@echo "Building combined BL1 and ROMLIB binary for Juno $@"
 	./lib/romlib/gen_combined_bl1_romlib.sh -o bl1_romlib.bin $(BUILD_PLAT)
 
@@ -142,20 +157,43 @@ ENABLE_SVE_FOR_NS		:=	0
 # Enable the dynamic translation tables library.
 ifeq (${ARCH},aarch32)
     ifeq (${RESET_TO_SP_MIN},1)
-        BL32_CFLAGS	+=	-DPLAT_XLAT_TABLES_DYNAMIC=1
+        BL32_CPPFLAGS	+=	-DPLAT_XLAT_TABLES_DYNAMIC
     endif
 else
     ifeq (${RESET_TO_BL31},1)
-        BL31_CFLAGS	+=	-DPLAT_XLAT_TABLES_DYNAMIC=1
+        BL31_CPPFLAGS	+=	-DPLAT_XLAT_TABLES_DYNAMIC
     endif
 endif
 
-# Add the FDT_SOURCES and options for Dynamic Config
-FDT_SOURCES		+=	plat/arm/board/juno/fdts/${PLAT}_tb_fw_config.dts
-TB_FW_CONFIG		:=	${BUILD_PLAT}/fdts/${PLAT}_tb_fw_config.dtb
+ifeq (${ALLOW_RO_XLAT_TABLES}, 1)
+    ifeq (${JUNO_AARCH32_EL3_RUNTIME}, 1)
+        BL32_CPPFLAGS	+=	-DPLAT_RO_XLAT_TABLES
+    else
+        BL31_CPPFLAGS	+=	-DPLAT_RO_XLAT_TABLES
+    endif
+endif
 
+BL1_CPPFLAGS += -march=armv8-a+crc
+BL2_CPPFLAGS += -march=armv8-a+crc
+BL2U_CPPFLAGS += -march=armv8-a+crc
+BL31_CPPFLAGS += -march=armv8-a+crc
+BL32_CPPFLAGS += -march=armv8-a+crc
+
+# Add the FDT_SOURCES and options for Dynamic Config
+FDT_SOURCES		+=	plat/arm/board/juno/fdts/${PLAT}_fw_config.dts	\
+				plat/arm/board/juno/fdts/${PLAT}_tb_fw_config.dts \
+				fdts/${PLAT}.dts
+
+FW_CONFIG		:=	${BUILD_PLAT}/fdts/${PLAT}_fw_config.dtb
+TB_FW_CONFIG		:=	${BUILD_PLAT}/fdts/${PLAT}_tb_fw_config.dtb
+HW_CONFIG		:=	${BUILD_PLAT}/fdts/${PLAT}.dtb
+
+# Add the FW_CONFIG to FIP and specify the same to certtool
+$(eval $(call TOOL_ADD_PAYLOAD,${FW_CONFIG},--fw-config,${FW_CONFIG}))
 # Add the TB_FW_CONFIG to FIP and specify the same to certtool
-$(eval $(call TOOL_ADD_PAYLOAD,${TB_FW_CONFIG},--tb-fw-config))
+$(eval $(call TOOL_ADD_PAYLOAD,${TB_FW_CONFIG},--tb-fw-config,${TB_FW_CONFIG}))
+# Add the HW_CONFIG to FIP and specify the same to certtool
+$(eval $(call TOOL_ADD_PAYLOAD,${HW_CONFIG},--hw-config,${HW_CONFIG}))
 
 include plat/arm/board/common/board_common.mk
 include plat/arm/common/arm_common.mk

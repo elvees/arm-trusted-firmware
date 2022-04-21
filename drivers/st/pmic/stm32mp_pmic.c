@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2019, STMicroelectronics - All Rights Reserved
+ * Copyright (c) 2017-2021, STMicroelectronics - All Rights Reserved
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -52,6 +52,15 @@ int dt_pmic_status(void)
 	}
 
 	return fdt_get_status(node);
+}
+
+static bool dt_pmic_is_secure(void)
+{
+	int status = dt_pmic_status();
+
+	return (status >= 0) &&
+	       (status == DT_SECURE) &&
+	       (i2c_handle.dt_status == DT_SECURE);
 }
 
 /*
@@ -112,6 +121,9 @@ int dt_pmic_configure_boot_on_regulators(void)
 	}
 
 	regulators_node = fdt_subnode_offset(fdt, pmic_node, "regulators");
+	if (regulators_node < 0) {
+		return -ENOENT;
+	}
 
 	fdt_for_each_subnode(regulator_node, fdt, regulators_node) {
 		const fdt32_t *cuint;
@@ -195,6 +207,7 @@ bool initialize_pmic_i2c(void)
 	i2c->i2c_base_addr		= i2c_info.base;
 	i2c->dt_status			= i2c_info.status;
 	i2c->clock			= i2c_info.clock;
+	i2c->i2c_state			= I2C_STATE_RESET;
 	i2c_init.own_address1		= pmic_i2c_addr;
 	i2c_init.addressing_mode	= I2C_ADDRESSINGMODE_7BIT;
 	i2c_init.dual_address_mode	= I2C_DUALADDRESS_DISABLE;
@@ -223,6 +236,19 @@ bool initialize_pmic_i2c(void)
 	return true;
 }
 
+static void register_pmic_shared_peripherals(void)
+{
+	uintptr_t i2c_base = i2c_handle.i2c_base_addr;
+
+	if (dt_pmic_is_secure()) {
+		stm32mp_register_secure_periph_iomem(i2c_base);
+	} else {
+		if (i2c_base != 0U) {
+			stm32mp_register_non_secure_periph_iomem(i2c_base);
+		}
+	}
+}
+
 void initialize_pmic(void)
 {
 	unsigned long pmic_version;
@@ -231,6 +257,8 @@ void initialize_pmic(void)
 		VERBOSE("No PMIC\n");
 		return;
 	}
+
+	register_pmic_shared_peripherals();
 
 	if (stpmic1_get_version(&pmic_version) != 0) {
 		ERROR("Failed to access PMIC\n");

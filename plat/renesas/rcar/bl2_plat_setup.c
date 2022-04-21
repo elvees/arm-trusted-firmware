@@ -1,9 +1,11 @@
 /*
- * Copyright (c) 2018-2019, Renesas Electronics Corporation. All rights reserved.
+ * Copyright (c) 2018-2021, Renesas Electronics Corporation. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+#include <inttypes.h>
+#include <stdint.h>
 #include <string.h>
 
 #include <libfdt.h>
@@ -15,10 +17,16 @@
 #include <common/bl_common.h>
 #include <common/debug.h>
 #include <common/desc_image_load.h>
+#include <common/image_decompress.h>
 #include <drivers/console.h>
+#include <drivers/io/io_driver.h>
+#include <drivers/io/io_storage.h>
 #include <lib/mmio.h>
 #include <lib/xlat_tables/xlat_tables_defs.h>
 #include <plat/common/platform.h>
+#if RCAR_GEN3_BL33_GZIP == 1
+#include <tf_gunzip.h>
+#endif
 
 #include "avs_driver.h"
 #include "boot_init_dram.h"
@@ -33,18 +41,26 @@
 #endif
 
 #include "io_common.h"
+#include "io_rcar.h"
 #include "qos_init.h"
 #include "rcar_def.h"
 #include "rcar_private.h"
 #include "rcar_version.h"
 #include "rom_api.h"
 
-IMPORT_SYM(unsigned long, __RO_START__, BL2_RO_BASE)
-IMPORT_SYM(unsigned long, __RO_END__, BL2_RO_LIMIT)
+#if RCAR_BL2_DCACHE == 1
+/*
+ * Following symbols are only used during plat_arch_setup() only
+ * when RCAR_BL2_DCACHE is enabled.
+ */
+static const uint64_t BL2_RO_BASE		= BL_CODE_BASE;
+static const uint64_t BL2_RO_LIMIT		= BL_CODE_END;
 
 #if USE_COHERENT_MEM
-IMPORT_SYM(unsigned long, __COHERENT_RAM_START__, BL2_COHERENT_RAM_BASE)
-IMPORT_SYM(unsigned long, __COHERENT_RAM_END__, BL2_COHERENT_RAM_LIMIT)
+static const uint64_t BL2_COHERENT_RAM_BASE	= BL_COHERENT_RAM_BASE;
+static const uint64_t BL2_COHERENT_RAM_LIMIT	= BL_COHERENT_RAM_END;
+#endif
+
 #endif
 
 extern void plat_rcar_gic_driver_init(void);
@@ -124,6 +140,7 @@ static void unsigned_num_print(unsigned long long int unum, unsigned int radix,
 
 	while (--i >= 0)
 		*string++ = num_buf[i];
+	*string = 0;
 }
 
 #if (RCAR_LOSSY_ENABLE == 1)
@@ -248,9 +265,6 @@ void bl2_plat_flush_bl31_params(void)
 	if (product == PRR_PRODUCT_H3 && PRR_PRODUCT_20 > cut)
 		goto tlb;
 
-	if (product == PRR_PRODUCT_D3)
-		goto tlb;
-
 	/* Disable MFIS write protection */
 	mmio_write_32(MFISWPCNTR, MFISWPCNTR_PASSWORD | 1);
 
@@ -346,15 +360,28 @@ static uint32_t is_ddr_backup_mode(void)
 #endif
 }
 
+#if RCAR_GEN3_BL33_GZIP == 1
+void bl2_plat_preload_setup(void)
+{
+	image_decompress_init(BL33_COMP_BASE, BL33_COMP_SIZE, gunzip);
+}
+#endif
+
 int bl2_plat_handle_pre_image_load(unsigned int image_id)
 {
 	u_register_t *boot_kind = (void *) BOOT_KIND_BASE;
 	bl_mem_params_node_t *bl_mem_params;
 
+	bl_mem_params = get_bl_mem_params_node(image_id);
+
+#if RCAR_GEN3_BL33_GZIP == 1
+	if (image_id == BL33_IMAGE_ID) {
+		image_decompress_prepare(&bl_mem_params->image_info);
+	}
+#endif
+
 	if (image_id != BL31_IMAGE_ID)
 		return 0;
-
-	bl_mem_params = get_bl_mem_params_node(image_id);
 
 	if (is_ddr_backup_mode() == RCAR_COLD_BOOT)
 		goto cold_boot;
@@ -375,10 +402,28 @@ cold_boot:
 	return 0;
 }
 
+static uint64_t rcar_get_dest_addr_from_cert(uint32_t certid, uintptr_t *dest)
+{
+	uint32_t cert, len;
+	int ret;
+
+	ret = rcar_get_certificate(certid, &cert);
+	if (ret) {
+		ERROR("%s : cert file load error", __func__);
+		return 1;
+	}
+
+	rcar_read_certificate((uint64_t) cert, &len, dest);
+
+	return 0;
+}
+
 int bl2_plat_handle_post_image_load(unsigned int image_id)
 {
 	static bl2_to_bl31_params_mem_t *params;
 	bl_mem_params_node_t *bl_mem_params;
+	uintptr_t dest;
+	int ret;
 
 	if (!params) {
 		params = (bl2_to_bl31_params_mem_t *) PARAMS_BASE;
@@ -389,12 +434,34 @@ int bl2_plat_handle_post_image_load(unsigned int image_id)
 
 	switch (image_id) {
 	case BL31_IMAGE_ID:
+		ret = rcar_get_dest_addr_from_cert(SOC_FW_CONTENT_CERT_ID,
+						   &dest);
+		if (!ret)
+			bl_mem_params->image_info.image_base = dest;
 		break;
 	case BL32_IMAGE_ID:
+		ret = rcar_get_dest_addr_from_cert(TRUSTED_OS_FW_CONTENT_CERT_ID,
+						   &dest);
+		if (!ret)
+			bl_mem_params->image_info.image_base = dest;
+
 		memcpy(&params->bl32_ep_info, &bl_mem_params->ep_info,
 			sizeof(entry_point_info_t));
 		break;
 	case BL33_IMAGE_ID:
+#if RCAR_GEN3_BL33_GZIP == 1
+		if ((mmio_read_32(BL33_COMP_BASE) & 0xffff) == 0x8b1f) {
+			/* decompress gzip-compressed image */
+			ret = image_decompress(&bl_mem_params->image_info);
+			if (ret != 0) {
+				return ret;
+			}
+		} else {
+			/* plain image, copy it in place */
+			memcpy((void *)BL33_BASE, (void *)BL33_COMP_BASE,
+				bl_mem_params->image_info.image_size);
+		}
+#endif
 		memcpy(&params->bl33_ep_info, &bl_mem_params->ep_info,
 			sizeof(entry_point_info_t));
 		break;
@@ -408,43 +475,46 @@ struct meminfo *bl2_plat_sec_mem_layout(void)
 	return &bl2_tzram_layout;
 }
 
-static void bl2_populate_compatible_string(void *fdt)
+static void bl2_populate_compatible_string(void *dt)
 {
 	uint32_t board_type;
 	uint32_t board_rev;
 	uint32_t reg;
 	int ret;
 
+	fdt_setprop_u32(dt, 0, "#address-cells", 2);
+	fdt_setprop_u32(dt, 0, "#size-cells", 2);
+
 	/* Populate compatible string */
 	rcar_get_board_type(&board_type, &board_rev);
 	switch (board_type) {
 	case BOARD_SALVATOR_X:
-		ret = fdt_setprop_string(fdt, 0, "compatible",
+		ret = fdt_setprop_string(dt, 0, "compatible",
 					 "renesas,salvator-x");
 		break;
 	case BOARD_SALVATOR_XS:
-		ret = fdt_setprop_string(fdt, 0, "compatible",
+		ret = fdt_setprop_string(dt, 0, "compatible",
 					 "renesas,salvator-xs");
 		break;
 	case BOARD_STARTER_KIT:
-		ret = fdt_setprop_string(fdt, 0, "compatible",
+		ret = fdt_setprop_string(dt, 0, "compatible",
 					 "renesas,m3ulcb");
 		break;
 	case BOARD_STARTER_KIT_PRE:
-		ret = fdt_setprop_string(fdt, 0, "compatible",
+		ret = fdt_setprop_string(dt, 0, "compatible",
 					 "renesas,h3ulcb");
 		break;
 	case BOARD_EAGLE:
-		ret = fdt_setprop_string(fdt, 0, "compatible",
+		ret = fdt_setprop_string(dt, 0, "compatible",
 					 "renesas,eagle");
 		break;
 	case BOARD_EBISU:
 	case BOARD_EBISU_4D:
-		ret = fdt_setprop_string(fdt, 0, "compatible",
+		ret = fdt_setprop_string(dt, 0, "compatible",
 					 "renesas,ebisu");
 		break;
 	case BOARD_DRAAK:
-		ret = fdt_setprop_string(fdt, 0, "compatible",
+		ret = fdt_setprop_string(dt, 0, "compatible",
 					 "renesas,draak");
 		break;
 	default:
@@ -460,27 +530,27 @@ static void bl2_populate_compatible_string(void *fdt)
 	reg = mmio_read_32(RCAR_PRR);
 	switch (reg & PRR_PRODUCT_MASK) {
 	case PRR_PRODUCT_H3:
-		ret = fdt_appendprop_string(fdt, 0, "compatible",
+		ret = fdt_appendprop_string(dt, 0, "compatible",
 					    "renesas,r8a7795");
 		break;
 	case PRR_PRODUCT_M3:
-		ret = fdt_appendprop_string(fdt, 0, "compatible",
+		ret = fdt_appendprop_string(dt, 0, "compatible",
 					    "renesas,r8a7796");
 		break;
 	case PRR_PRODUCT_M3N:
-		ret = fdt_appendprop_string(fdt, 0, "compatible",
+		ret = fdt_appendprop_string(dt, 0, "compatible",
 					    "renesas,r8a77965");
 		break;
 	case PRR_PRODUCT_V3M:
-		ret = fdt_appendprop_string(fdt, 0, "compatible",
+		ret = fdt_appendprop_string(dt, 0, "compatible",
 					    "renesas,r8a77970");
 		break;
 	case PRR_PRODUCT_E3:
-		ret = fdt_appendprop_string(fdt, 0, "compatible",
+		ret = fdt_appendprop_string(dt, 0, "compatible",
 					    "renesas,r8a77990");
 		break;
 	case PRR_PRODUCT_D3:
-		ret = fdt_appendprop_string(fdt, 0, "compatible",
+		ret = fdt_appendprop_string(dt, 0, "compatible",
 					    "renesas,r8a77995");
 		break;
 	default:
@@ -494,12 +564,75 @@ static void bl2_populate_compatible_string(void *fdt)
 	}
 }
 
-static void bl2_advertise_dram_entries(uint64_t dram_config[8])
+static void bl2_add_rpc_node(void)
+{
+#if (RCAR_RPC_HYPERFLASH_LOCKED == 0)
+	int ret, node;
+
+	node = ret = fdt_add_subnode(fdt, 0, "soc");
+	if (ret < 0) {
+		goto err;
+	}
+
+	node = ret = fdt_add_subnode(fdt, node, "rpc@ee200000");
+	if (ret < 0) {
+		goto err;
+	}
+
+	ret = fdt_setprop_string(fdt, node, "status", "okay");
+	if (ret < 0) {
+		goto err;
+	}
+
+	return;
+err:
+	NOTICE("BL2: Cannot add RPC node to FDT (ret=%i)\n", ret);
+	panic();
+#endif
+}
+
+static void bl2_add_dram_entry(uint64_t start, uint64_t size)
 {
 	char nodename[32] = { 0 };
-	uint64_t start, size;
 	uint64_t fdtsize;
-	int ret, node, chan;
+	int ret, node;
+
+	fdtsize = cpu_to_fdt64(size);
+
+	snprintf(nodename, sizeof(nodename), "memory@");
+	unsigned_num_print(start, 16, nodename + strlen(nodename));
+	node = ret = fdt_add_subnode(fdt, 0, nodename);
+	if (ret < 0) {
+		goto err;
+	}
+
+	ret = fdt_setprop_string(fdt, node, "device_type", "memory");
+	if (ret < 0) {
+		goto err;
+	}
+
+	ret = fdt_setprop_u64(fdt, node, "reg", start);
+	if (ret < 0) {
+		goto err;
+	}
+
+	ret = fdt_appendprop(fdt, node, "reg", &fdtsize,
+			     sizeof(fdtsize));
+	if (ret < 0) {
+		goto err;
+	}
+
+	return;
+err:
+	NOTICE("BL2: Cannot add memory node [%" PRIx64 " - %" PRIx64 "] to FDT (ret=%i)\n",
+		start, start + size - 1, ret);
+	panic();
+}
+
+static void bl2_advertise_dram_entries(uint64_t dram_config[8])
+{
+	uint64_t start, size, size32;
+	int chan;
 
 	for (chan = 0; chan < 4; chan++) {
 		start = dram_config[2 * chan];
@@ -507,7 +640,7 @@ static void bl2_advertise_dram_entries(uint64_t dram_config[8])
 		if (!size)
 			continue;
 
-		NOTICE("BL2: CH%d: %llx - %llx, %lld %siB\n",
+		NOTICE("BL2: CH%d: %" PRIx64 " - %" PRIx64 ", %" PRId64 " %siB\n",
 			chan, start, start + size - 1,
 			(size >> 30) ? : size >> 20,
 			(size >> 30) ? "G" : "M");
@@ -527,39 +660,43 @@ static void bl2_advertise_dram_entries(uint64_t dram_config[8])
 
 		/*
 		 * Channel 0 is mapped in 32bit space and the first
-		 * 128 MiB are reserved
+		 * 128 MiB are reserved and the maximum size is 2GiB.
 		 */
 		if (chan == 0) {
-			start = 0x48000000;
-			size -= 0x8000000;
+			/* Limit the 32bit entry to 2 GiB - 128 MiB */
+			size32 = size - 0x8000000U;
+			if (size32 >= 0x78000000U) {
+				size32 = 0x78000000U;
+			}
+
+			/* Emit 32bit entry, up to 2 GiB - 128 MiB long. */
+			bl2_add_dram_entry(0x48000000, size32);
+
+			/*
+			 * If channel 0 is less than 2 GiB long, the
+			 * entire memory fits into the 32bit space entry,
+			 * so move on to the next channel.
+			 */
+			if (size <= 0x80000000U) {
+				continue;
+			}
+
+			/*
+			 * If channel 0 is more than 2 GiB long, emit
+			 * another entry which covers the rest of the
+			 * memory in channel 0, in the 64bit space.
+			 *
+			 * Start of this new entry is at 2 GiB offset
+			 * from the beginning of the 64bit channel 0
+			 * address, size is 2 GiB shorter than total
+			 * size of the channel.
+			 */
+			start += 0x80000000U;
+			size -= 0x80000000U;
 		}
 
-		fdtsize = cpu_to_fdt64(size);
-
-		snprintf(nodename, sizeof(nodename), "memory@");
-		unsigned_num_print(start, 16, nodename + strlen(nodename));
-		node = ret = fdt_add_subnode(fdt, 0, nodename);
-		if (ret < 0)
-			goto err;
-
-		ret = fdt_setprop_string(fdt, node, "device_type", "memory");
-		if (ret < 0)
-			goto err;
-
-		ret = fdt_setprop_u64(fdt, node, "reg", start);
-		if (ret < 0)
-			goto err;
-
-		ret = fdt_appendprop(fdt, node, "reg", &fdtsize,
-				     sizeof(fdtsize));
-		if (ret < 0)
-			goto err;
+		bl2_add_dram_entry(start, size);
 	}
-
-	return;
-err:
-	NOTICE("BL2: Cannot add memory node to FDT (ret=%i)\n", ret);
-	panic();
 }
 
 static void bl2_advertise_dram_size(uint32_t product)
@@ -570,6 +707,7 @@ static void bl2_advertise_dram_size(uint32_t product)
 		[4] = 0x600000000ULL,
 		[6] = 0x700000000ULL,
 	};
+	uint32_t cut = mmio_read_32(RCAR_PRR) & PRR_CUT_MASK;
 
 	switch (product) {
 	case PRR_PRODUCT_H3:
@@ -595,20 +733,31 @@ static void bl2_advertise_dram_size(uint32_t product)
 		break;
 
 	case PRR_PRODUCT_M3:
+		if (cut < PRR_PRODUCT_30) {
 #if (RCAR_GEN3_ULCB == 1)
-		/* 2GB(1GBx2 2ch split) */
-		dram_config[1] = 0x40000000ULL;
-		dram_config[5] = 0x40000000ULL;
+			/* 2GB(1GBx2 2ch split) */
+			dram_config[1] = 0x40000000ULL;
+			dram_config[5] = 0x40000000ULL;
 #else
-		/* 4GB(2GBx2 2ch split) */
-		dram_config[1] = 0x80000000ULL;
-		dram_config[5] = 0x80000000ULL;
+			/* 4GB(2GBx2 2ch split) */
+			dram_config[1] = 0x80000000ULL;
+			dram_config[5] = 0x80000000ULL;
 #endif
+		} else {
+			/* 8GB(2GBx4 2ch split) */
+			dram_config[1] = 0x100000000ULL;
+			dram_config[5] = 0x100000000ULL;
+		}
 		break;
 
 	case PRR_PRODUCT_M3N:
+#if (RCAR_DRAM_LPDDR4_MEMCONF == 2)
+		/* 4GB(4GBx1) */
+		dram_config[1] = 0x100000000ULL;
+#elif (RCAR_DRAM_LPDDR4_MEMCONF == 1)
 		/* 2GB(1GBx2) */
 		dram_config[1] = 0x80000000ULL;
+#endif
 		break;
 
 	case PRR_PRODUCT_V3M:
@@ -754,6 +903,14 @@ void bl2_el3_early_platform_setup(u_register_t arg1, u_register_t arg2,
 				str,
 				(reg & RCAR_MINOR_MASK) + RCAR_M3_MINOR_OFFSET);
 		}
+	} else if (product == PRR_PRODUCT_D3) {
+		if (RCAR_D3_CUT_VER10 == (reg & PRR_CUT_MASK)) {
+			NOTICE("BL2: PRR is R-Car %s Ver.1.0\n", str);
+		} else  if (RCAR_D3_CUT_VER11 == (reg & PRR_CUT_MASK)) {
+			NOTICE("BL2: PRR is R-Car %s Ver.1.1\n", str);
+		} else {
+			NOTICE("BL2: PRR is R-Car %s Ver.X.X\n", str);
+		}
 	} else {
 		major = (reg & RCAR_MAJOR_MASK) >> RCAR_MAJOR_SHIFT;
 		major = major + RCAR_MAJOR_OFFSET;
@@ -761,7 +918,7 @@ void bl2_el3_early_platform_setup(u_register_t arg1, u_register_t arg2,
 		NOTICE("BL2: PRR is R-Car %s Ver.%d.%d\n", str, major, minor);
 	}
 
-	if (product == PRR_PRODUCT_E3) {
+	if (PRR_PRODUCT_E3 == product || PRR_PRODUCT_D3 == product) {
 		reg = mmio_read_32(RCAR_MODEMR);
 		sscg = reg & RCAR_SSCG_MASK;
 		str = sscg == RCAR_SSCG_ENABLE ? sscg_on : sscg_off;
@@ -825,10 +982,6 @@ void bl2_el3_early_platform_setup(u_register_t arg1, u_register_t arg2,
 		str = boot_emmc25x1;
 		break;
 	case MODEMR_BOOT_DEV_EMMC_50X8:
-#if RCAR_LSI == RCAR_D3
-		ERROR("BL2: Failed to Initialize. eMMC is not supported.\n");
-		panic();
-#endif
 		str = boot_emmc50x8;
 		break;
 	default:
@@ -893,6 +1046,9 @@ lcm_state:
 
 	/* Add platform compatible string */
 	bl2_populate_compatible_string(fdt);
+
+	/* Enable RPC if unlocked */
+	bl2_add_rpc_node();
 
 	/* Print DRAM layout */
 	bl2_advertise_dram_size(product);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2019, STMicroelectronics - All Rights Reserved
+ * Copyright (c) 2016-2021, STMicroelectronics - All Rights Reserved
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -29,6 +29,16 @@
  */
 #define STM32_SMC_BSEC			0x82001003
 
+/*
+ * STM32_SIP_SMC_SCMI_AGENT0
+ * STM32_SIP_SMC_SCMI_AGENT1
+ * Process SCMI message pending in SCMI shared memory buffer.
+ *
+ * Argument a0: (input) SMCC ID
+ */
+#define STM32_SIP_SMC_SCMI_AGENT0	0x82002000
+#define STM32_SIP_SMC_SCMI_AGENT1	0x82002001
+
 /* SMC function IDs for SiP Service queries */
 #define STM32_SIP_SVC_CALL_COUNT	0x8200ff00
 #define STM32_SIP_SVC_UID		0x8200ff01
@@ -40,12 +50,18 @@
 #define STM32_SIP_SVC_VERSION_MINOR	0x1
 
 /* Number of STM32 SiP Calls implemented */
-#define STM32_COMMON_SIP_NUM_CALLS	4
+#define STM32_COMMON_SIP_NUM_CALLS	3
 
 /* Service for BSEC */
 #define STM32_SMC_READ_SHADOW		0x01
 #define STM32_SMC_PROG_OTP		0x02
 #define STM32_SMC_WRITE_SHADOW		0x03
 #define STM32_SMC_READ_OTP		0x04
+
+/* SMC error codes */
+#define STM32_SMC_OK			0x00000000U
+#define STM32_SMC_NOT_SUPPORTED		0xFFFFFFFFU
+#define STM32_SMC_FAILED		0xFFFFFFFEU
+#define STM32_SMC_INVALID_PARAMS	0xFFFFFFFDU
 
 #endif /* STM32MP1_SMC_H */

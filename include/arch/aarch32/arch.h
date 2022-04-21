@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2019, ARM Limited and Contributors. All rights reserved.
+ * Copyright (c) 2016-2021, ARM Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -102,6 +102,21 @@
 /* CSSELR definitions */
 #define LEVEL_SHIFT		U(1)
 
+/* ID_DFR0_EL1 definitions */
+#define ID_DFR0_COPTRC_SHIFT		U(12)
+#define ID_DFR0_COPTRC_MASK		U(0xf)
+#define ID_DFR0_COPTRC_SUPPORTED	U(1)
+#define ID_DFR0_COPTRC_LENGTH		U(4)
+#define ID_DFR0_TRACEFILT_SHIFT		U(28)
+#define ID_DFR0_TRACEFILT_MASK		U(0xf)
+#define ID_DFR0_TRACEFILT_SUPPORTED	U(1)
+#define ID_DFR0_TRACEFILT_LENGTH	U(4)
+
+/* ID_DFR1_EL1 definitions */
+#define ID_DFR1_MTPMU_SHIFT	U(0)
+#define ID_DFR1_MTPMU_MASK	U(0xf)
+#define ID_DFR1_MTPMU_SUPPORTED	U(1)
+
 /* ID_MMFR4 definitions */
 #define ID_MMFR4_CNP_SHIFT	U(12)
 #define ID_MMFR4_CNP_LENGTH	U(4)
@@ -111,6 +126,9 @@
 #define ID_PFR0_AMU_SHIFT	U(20)
 #define ID_PFR0_AMU_LENGTH	U(4)
 #define ID_PFR0_AMU_MASK	U(0xf)
+#define ID_PFR0_AMU_NOT_SUPPORTED	U(0x0)
+#define ID_PFR0_AMU_V1		U(0x1)
+#define ID_PFR0_AMU_V1P1	U(0x2)
 
 #define ID_PFR0_DIT_SHIFT	U(24)
 #define ID_PFR0_DIT_LENGTH	U(4)
@@ -126,6 +144,9 @@
 #define ID_PFR1_GENTIMER_MASK	U(0xf)
 #define ID_PFR1_GIC_SHIFT	U(28)
 #define ID_PFR1_GIC_MASK	U(0xf)
+#define ID_PFR1_SEC_SHIFT	U(4)
+#define ID_PFR1_SEC_MASK	U(0xf)
+#define ID_PFR1_ELx_ENABLED	U(1)
 
 /* SCTLR definitions */
 #define SCTLR_RES1_DEF		((U(1) << 23) | (U(1) << 22) | (U(1) << 4) | \
@@ -162,8 +183,10 @@
 #define SDCR_SPD_DISABLE	U(0x2)
 #define SDCR_SPD_ENABLE		U(0x3)
 #define SDCR_SCCD_BIT		(U(1) << 23)
+#define SDCR_TTRF_BIT		(U(1) << 19)
 #define SDCR_SPME_BIT		(U(1) << 17)
 #define SDCR_RESET_VAL		U(0x0)
+#define SDCR_MTPME_BIT		(U(1) << 28)
 
 /* HSCTLR definitions */
 #define HSCTLR_RES1	((U(1) << 29) | (U(1) << 28) | (U(1) << 23) | \
@@ -183,23 +206,23 @@
 
 /* CPACR definitions */
 #define CPACR_FPEN(x)		((x) << 20)
-#define CPACR_FP_TRAP_PL0	U(0x1)
-#define CPACR_FP_TRAP_ALL	U(0x2)
-#define CPACR_FP_TRAP_NONE	U(0x3)
+#define CPACR_FP_TRAP_PL0	UL(0x1)
+#define CPACR_FP_TRAP_ALL	UL(0x2)
+#define CPACR_FP_TRAP_NONE	UL(0x3)
 
 /* SCR definitions */
-#define SCR_TWE_BIT		(U(1) << 13)
-#define SCR_TWI_BIT		(U(1) << 12)
-#define SCR_SIF_BIT		(U(1) << 9)
-#define SCR_HCE_BIT		(U(1) << 8)
-#define SCR_SCD_BIT		(U(1) << 7)
-#define SCR_NET_BIT		(U(1) << 6)
-#define SCR_AW_BIT		(U(1) << 5)
-#define SCR_FW_BIT		(U(1) << 4)
-#define SCR_EA_BIT		(U(1) << 3)
-#define SCR_FIQ_BIT		(U(1) << 2)
-#define SCR_IRQ_BIT		(U(1) << 1)
-#define SCR_NS_BIT		(U(1) << 0)
+#define SCR_TWE_BIT		(UL(1) << 13)
+#define SCR_TWI_BIT		(UL(1) << 12)
+#define SCR_SIF_BIT		(UL(1) << 9)
+#define SCR_HCE_BIT		(UL(1) << 8)
+#define SCR_SCD_BIT		(UL(1) << 7)
+#define SCR_NET_BIT		(UL(1) << 6)
+#define SCR_AW_BIT		(UL(1) << 5)
+#define SCR_FW_BIT		(UL(1) << 4)
+#define SCR_EA_BIT		(UL(1) << 3)
+#define SCR_FIQ_BIT		(UL(1) << 2)
+#define SCR_IRQ_BIT		(UL(1) << 1)
+#define SCR_NS_BIT		(UL(1) << 0)
 #define SCR_VALID_BIT_MASK	U(0x33ff)
 #define SCR_RESET_VAL		U(0x0)
 
@@ -230,7 +253,8 @@
 /* HCPTR definitions */
 #define HCPTR_RES1		((U(1) << 13) | (U(1) << 12) | U(0x3ff))
 #define TCPAC_BIT		(U(1) << 31)
-#define TAM_BIT			(U(1) << 30)
+#define TAM_SHIFT		U(30)
+#define TAM_BIT			(U(1) << TAM_SHIFT)
 #define TTA_BIT			(U(1) << 20)
 #define TCP11_BIT		(U(1) << 11)
 #define TCP10_BIT		(U(1) << 10)
@@ -244,6 +268,7 @@
 #define VTTBR_BADDR_SHIFT	U(0)
 
 /* HDCR definitions */
+#define HDCR_MTPME_BIT		(U(1) << 28)
 #define HDCR_HLP_BIT		(U(1) << 26)
 #define HDCR_HPME_BIT		(U(1) << 7)
 #define HDCR_RESET_VAL		U(0x0)
@@ -388,13 +413,17 @@
 
 #define GET_M32(mode)		(((mode) >> MODE32_SHIFT) & MODE32_MASK)
 
-#define SPSR_MODE32(mode, isa, endian, aif)		\
-	((MODE_RW_32 << MODE_RW_SHIFT |			\
-	((mode) & MODE32_MASK) << MODE32_SHIFT |	\
-	((isa) & SPSR_T_MASK) << SPSR_T_SHIFT |		\
-	((endian) & SPSR_E_MASK) << SPSR_E_SHIFT |	\
-	((aif) & SPSR_AIF_MASK) << SPSR_AIF_SHIFT) &	\
-	(~(SPSR_SSBS_BIT)))
+#define SPSR_MODE32(mode, isa, endian, aif) \
+( \
+	( \
+		(MODE_RW_32 << MODE_RW_SHIFT) | \
+		(((mode) & MODE32_MASK) << MODE32_SHIFT) | \
+		(((isa) & SPSR_T_MASK) << SPSR_T_SHIFT) | \
+		(((endian) & SPSR_E_MASK) << SPSR_E_SHIFT) | \
+		(((aif) & SPSR_AIF_MASK) << SPSR_AIF_SHIFT) \
+	) & \
+	(~(SPSR_SSBS_BIT)) \
+)
 
 /*
  * TTBR definitions
@@ -499,6 +528,8 @@
 #define CTR		p15, 0, c0, c0, 1
 #define CNTFRQ		p15, 0, c14, c0, 0
 #define ID_MMFR4	p15, 0, c0, c2, 6
+#define ID_DFR0		p15, 0, c0, c1, 2
+#define ID_DFR1		p15, 0, c0, c3, 5
 #define ID_PFR0		p15, 0, c0, c1, 0
 #define ID_PFR1		p15, 0, c0, c1, 1
 #define MAIR0		p15, 0, c10, c2, 0
@@ -638,7 +669,7 @@
 #define PAR_ADDR_MASK	(BIT_64(40) - ULL(1)) /* 40-bits-wide page address */
 
 /*******************************************************************************
- * Definitions for system register interface to AMU for ARMv8.4 onwards
+ * Definitions for system register interface to AMU for FEAT_AMUv1
  ******************************************************************************/
 #define AMCR		p15, 0, c13, c2, 0
 #define AMCFGR		p15, 0, c13, c2, 1
@@ -696,5 +727,47 @@
 #define AMEVTYPER1D	p15, 0, c13, c15, 5
 #define AMEVTYPER1E	p15, 0, c13, c15, 6
 #define AMEVTYPER1F	p15, 0, c13, c15, 7
+
+/* AMCNTENSET0 definitions */
+#define AMCNTENSET0_Pn_SHIFT	U(0)
+#define AMCNTENSET0_Pn_MASK	U(0xffff)
+
+/* AMCNTENSET1 definitions */
+#define AMCNTENSET1_Pn_SHIFT	U(0)
+#define AMCNTENSET1_Pn_MASK	U(0xffff)
+
+/* AMCNTENCLR0 definitions */
+#define AMCNTENCLR0_Pn_SHIFT	U(0)
+#define AMCNTENCLR0_Pn_MASK	U(0xffff)
+
+/* AMCNTENCLR1 definitions */
+#define AMCNTENCLR1_Pn_SHIFT	U(0)
+#define AMCNTENCLR1_Pn_MASK	U(0xffff)
+
+/* AMCR definitions */
+#define AMCR_CG1RZ_SHIFT	U(17)
+#define AMCR_CG1RZ_BIT		(ULL(1) << AMCR_CG1RZ_SHIFT)
+
+/* AMCFGR definitions */
+#define AMCFGR_NCG_SHIFT	U(28)
+#define AMCFGR_NCG_MASK		U(0xf)
+#define AMCFGR_N_SHIFT		U(0)
+#define AMCFGR_N_MASK		U(0xff)
+
+/* AMCGCR definitions */
+#define AMCGCR_CG0NC_SHIFT	U(0)
+#define AMCGCR_CG0NC_MASK	U(0xff)
+#define AMCGCR_CG1NC_SHIFT	U(8)
+#define AMCGCR_CG1NC_MASK	U(0xff)
+
+/*******************************************************************************
+ * Definitions for DynamicIQ Shared Unit registers
+ ******************************************************************************/
+#define CLUSTERPWRDN	p15, 0, c15, c3, 6
+
+/* CLUSTERPWRDN register definitions */
+#define DSU_CLUSTER_PWR_OFF	0
+#define DSU_CLUSTER_PWR_ON	1
+#define DSU_CLUSTER_PWR_MASK	U(1)
 
 #endif /* ARCH_H */

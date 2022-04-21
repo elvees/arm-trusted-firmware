@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2019, ARM Limited and Contributors. All rights reserved.
+ * Copyright (c) 2016-2020, ARM Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -14,15 +14,20 @@
  * that.
  */
 
+#include <errno.h>
+#include <stdio.h>
 #include <string.h>
 
 #include <libfdt.h>
 
+#include <arch.h>
 #include <common/debug.h>
+#include <common/fdt_fixup.h>
+#include <common/fdt_wrappers.h>
 #include <drivers/console.h>
 #include <lib/psci/psci.h>
+#include <plat/common/platform.h>
 
-#include <common/fdt_fixup.h>
 
 static int append_psci_compatible(void *fdt, int offs, const char *str)
 {
@@ -95,7 +100,7 @@ int dt_add_psci_node(void *fdt)
  * or none have to be patched in the first place.
  * Returns 1 if *one* such subnode has been found and successfully changed
  * to "psci".
- * Returns -1 on error.
+ * Returns negative values on error.
  *
  * Call in a loop until it returns 0. Recalculate the node offset after
  * it has returned 1.
@@ -109,20 +114,23 @@ static int dt_update_one_cpu_node(void *fdt, int offset)
 	     offs = fdt_next_subnode(fdt, offs)) {
 		const char *prop;
 		int len;
+		int ret;
 
 		prop = fdt_getprop(fdt, offs, "device_type", &len);
-		if (!prop)
+		if (prop == NULL)
 			continue;
-		if (memcmp(prop, "cpu", 4) != 0 || len != 4)
+		if ((strcmp(prop, "cpu") != 0) || (len != 4))
 			continue;
 
 		/* Ignore any nodes which already use "psci". */
 		prop = fdt_getprop(fdt, offs, "enable-method", &len);
-		if (prop && memcmp(prop, "psci", 5) == 0 && len == 5)
+		if ((prop != NULL) &&
+		    (strcmp(prop, "psci") == 0) && (len == 5))
 			continue;
 
-		if (fdt_setprop_string(fdt, offs, "enable-method", "psci"))
-			return -1;
+		ret = fdt_setprop_string(fdt, offs, "enable-method", "psci");
+		if (ret < 0)
+			return ret;
 		/*
 		 * Subnode found and patched.
 		 * Restart to accommodate potentially changed offsets.
@@ -180,6 +188,8 @@ int dt_add_psci_cpu_enable_methods(void *fdt)
  *
  * See reserved-memory/reserved-memory.txt in the (Linux kernel) DT binding
  * documentation for details.
+ * According to this binding, the address-cells and size-cells must match
+ * those of the root node.
  *
  * Return: 0 on success, a negative error value otherwise.
  ******************************************************************************/
@@ -187,23 +197,285 @@ int fdt_add_reserved_memory(void *dtb, const char *node_name,
 			    uintptr_t base, size_t size)
 {
 	int offs = fdt_path_offset(dtb, "/reserved-memory");
-	uint32_t addresses[3];
+	uint32_t addresses[4];
+	int ac, sc;
+	unsigned int idx = 0;
 
+	ac = fdt_address_cells(dtb, 0);
+	sc = fdt_size_cells(dtb, 0);
 	if (offs < 0) {			/* create if not existing yet */
 		offs = fdt_add_subnode(dtb, 0, "reserved-memory");
-		if (offs < 0)
+		if (offs < 0) {
 			return offs;
-		fdt_setprop_u32(dtb, offs, "#address-cells", 2);
-		fdt_setprop_u32(dtb, offs, "#size-cells", 1);
+		}
+		fdt_setprop_u32(dtb, offs, "#address-cells", ac);
+		fdt_setprop_u32(dtb, offs, "#size-cells", sc);
 		fdt_setprop(dtb, offs, "ranges", NULL, 0);
 	}
 
-	addresses[0] = cpu_to_fdt32(HIGH_BITS(base));
-	addresses[1] = cpu_to_fdt32(base & 0xffffffff);
-	addresses[2] = cpu_to_fdt32(size & 0xffffffff);
+	if (ac > 1) {
+		addresses[idx] = cpu_to_fdt32(HIGH_BITS(base));
+		idx++;
+	}
+	addresses[idx] = cpu_to_fdt32(base & 0xffffffff);
+	idx++;
+	if (sc > 1) {
+		addresses[idx] = cpu_to_fdt32(HIGH_BITS(size));
+		idx++;
+	}
+	addresses[idx] = cpu_to_fdt32(size & 0xffffffff);
+	idx++;
 	offs = fdt_add_subnode(dtb, offs, node_name);
 	fdt_setprop(dtb, offs, "no-map", NULL, 0);
-	fdt_setprop(dtb, offs, "reg", addresses, 12);
+	fdt_setprop(dtb, offs, "reg", addresses, idx * sizeof(uint32_t));
 
 	return 0;
+}
+
+/*******************************************************************************
+ * fdt_add_cpu()	Add a new CPU node to the DT
+ * @dtb:		Pointer to the device tree blob in memory
+ * @parent:		Offset of the parent node
+ * @mpidr:		MPIDR for the current CPU
+ *
+ * Create and add a new cpu node to a DTB.
+ *
+ * Return the offset of the new node or a negative value in case of error
+ ******************************************************************************/
+
+static int fdt_add_cpu(void *dtb, int parent, u_register_t mpidr)
+{
+	int cpu_offs;
+	int err;
+	char snode_name[15];
+	uint64_t reg_prop;
+
+	reg_prop = mpidr & MPID_MASK & ~MPIDR_MT_MASK;
+
+	snprintf(snode_name, sizeof(snode_name), "cpu@%x",
+					(unsigned int)reg_prop);
+
+	cpu_offs = fdt_add_subnode(dtb, parent, snode_name);
+	if (cpu_offs < 0) {
+		ERROR ("FDT: add subnode \"%s\" failed: %i\n",
+							snode_name, cpu_offs);
+		return cpu_offs;
+	}
+
+	err = fdt_setprop_string(dtb, cpu_offs, "compatible", "arm,armv8");
+	if (err < 0) {
+		ERROR ("FDT: write to \"%s\" property of node at offset %i failed\n",
+			"compatible", cpu_offs);
+		return err;
+	}
+
+	err = fdt_setprop_u64(dtb, cpu_offs, "reg", reg_prop);
+	if (err < 0) {
+		ERROR ("FDT: write to \"%s\" property of node at offset %i failed\n",
+			"reg", cpu_offs);
+		return err;
+	}
+
+	err = fdt_setprop_string(dtb, cpu_offs, "device_type", "cpu");
+	if (err < 0) {
+		ERROR ("FDT: write to \"%s\" property of node at offset %i failed\n",
+			"device_type", cpu_offs);
+		return err;
+	}
+
+	err = fdt_setprop_string(dtb, cpu_offs, "enable-method", "psci");
+	if (err < 0) {
+		ERROR ("FDT: write to \"%s\" property of node at offset %i failed\n",
+			"enable-method", cpu_offs);
+		return err;
+	}
+
+	return cpu_offs;
+}
+
+/******************************************************************************
+ * fdt_add_cpus_node() - Add the cpus node to the DTB
+ * @dtb:		pointer to the device tree blob in memory
+ * @afflv0:		Maximum number of threads per core (affinity level 0).
+ * @afflv1:		Maximum number of CPUs per cluster (affinity level 1).
+ * @afflv2:		Maximum number of clusters (affinity level 2).
+ *
+ * Iterate over all the possible MPIDs given the maximum affinity levels and
+ * add a cpus node to the DTB with all the valid CPUs on the system.
+ * If there is already a /cpus node, exit gracefully
+ *
+ * A system with two CPUs would generate a node equivalent or similar to:
+ *
+ *	cpus {
+ *		#address-cells = <2>;
+ *		#size-cells = <0>;
+ *
+ *		cpu0: cpu@0 {
+ *			compatible = "arm,armv8";
+ *			reg = <0x0 0x0>;
+ *			device_type = "cpu";
+ *			enable-method = "psci";
+ *		};
+ *		cpu1: cpu@10000 {
+ *			compatible = "arm,armv8";
+ *			reg = <0x0 0x100>;
+ *			device_type = "cpu";
+ *			enable-method = "psci";
+ *		};
+ *	};
+ *
+ * Full documentation about the CPU bindings can be found at:
+ * https://www.kernel.org/doc/Documentation/devicetree/bindings/arm/cpus.txt
+ *
+ * Return the offset of the node or a negative value on error.
+ ******************************************************************************/
+
+int fdt_add_cpus_node(void *dtb, unsigned int afflv0,
+		      unsigned int afflv1, unsigned int afflv2)
+{
+	int offs;
+	int err;
+	unsigned int i, j, k;
+	u_register_t mpidr;
+	int cpuid;
+
+	if (fdt_path_offset(dtb, "/cpus") >= 0) {
+		return -EEXIST;
+	}
+
+	offs = fdt_add_subnode(dtb, 0, "cpus");
+	if (offs < 0) {
+		ERROR ("FDT: add subnode \"cpus\" node to parent node failed");
+		return offs;
+	}
+
+	err = fdt_setprop_u32(dtb, offs, "#address-cells", 2);
+	if (err < 0) {
+		ERROR ("FDT: write to \"%s\" property of node at offset %i failed\n",
+			"#address-cells", offs);
+		return err;
+	}
+
+	err = fdt_setprop_u32(dtb, offs, "#size-cells", 0);
+	if (err < 0) {
+		ERROR ("FDT: write to \"%s\" property of node at offset %i failed\n",
+			"#size-cells", offs);
+		return err;
+	}
+
+	/*
+	 * Populate the node with the CPUs.
+	 * As libfdt prepends subnodes within a node, reverse the index count
+	 * so the CPU nodes would be better ordered.
+	 */
+	for (i = afflv2; i > 0U; i--) {
+		for (j = afflv1; j > 0U; j--) {
+			for (k = afflv0; k > 0U; k--) {
+				mpidr = ((i - 1) << MPIDR_AFF2_SHIFT) |
+					((j - 1) << MPIDR_AFF1_SHIFT) |
+					((k - 1) << MPIDR_AFF0_SHIFT) |
+					(read_mpidr_el1() & MPIDR_MT_MASK);
+
+				cpuid = plat_core_pos_by_mpidr(mpidr);
+				if (cpuid >= 0) {
+					/* Valid MPID found */
+					err = fdt_add_cpu(dtb, offs, mpidr);
+					if (err < 0) {
+						ERROR ("FDT: %s 0x%08x\n",
+							"error adding CPU",
+							(uint32_t)mpidr);
+						return err;
+					}
+				}
+			}
+		}
+	}
+
+	return offs;
+}
+
+/**
+ * fdt_adjust_gic_redist() - Adjust GICv3 redistributor size
+ * @dtb: Pointer to the DT blob in memory
+ * @nr_cores: Number of CPU cores on this system.
+ * @gicr_base: Base address of the first GICR frame, or ~0 if unchanged
+ * @gicr_frame_size: Size of the GICR frame per core
+ *
+ * On a GICv3 compatible interrupt controller, the redistributor provides
+ * a number of 64k pages per each supported core. So with a dynamic topology,
+ * this size cannot be known upfront and thus can't be hardcoded into the DTB.
+ *
+ * Find the DT node describing the GICv3 interrupt controller, and adjust
+ * the size of the redistributor to match the number of actual cores on
+ * this system.
+ * A GICv4 compatible redistributor uses four 64K pages per core, whereas GICs
+ * without support for direct injection of virtual interrupts use two 64K pages.
+ * The @gicr_frame_size parameter should be 262144 and 131072, respectively.
+ * Also optionally allow adjusting the GICR frame base address, when this is
+ * different due to ITS frames between distributor and redistributor.
+ *
+ * Return: 0 on success, negative error value otherwise.
+ */
+int fdt_adjust_gic_redist(void *dtb, unsigned int nr_cores,
+			  uintptr_t gicr_base, unsigned int gicr_frame_size)
+{
+	int offset = fdt_node_offset_by_compatible(dtb, 0, "arm,gic-v3");
+	uint64_t reg_64;
+	uint32_t reg_32;
+	void *val;
+	int parent, ret;
+	int ac, sc;
+
+	if (offset < 0) {
+		return offset;
+	}
+
+	parent = fdt_parent_offset(dtb, offset);
+	if (parent < 0) {
+		return parent;
+	}
+	ac = fdt_address_cells(dtb, parent);
+	sc = fdt_size_cells(dtb, parent);
+	if (ac < 0 || sc < 0) {
+		return -EINVAL;
+	}
+
+	if (gicr_base != INVALID_BASE_ADDR) {
+		if (ac == 1) {
+			reg_32 = cpu_to_fdt32(gicr_base);
+			val = &reg_32;
+		} else {
+			reg_64 = cpu_to_fdt64(gicr_base);
+			val = &reg_64;
+		}
+		/*
+		 * The redistributor base address is the second address in
+		 * the "reg" entry, so we have to skip one address and one
+		 * size cell.
+		 */
+		ret = fdt_setprop_inplace_namelen_partial(dtb, offset,
+							  "reg", 3,
+							  (ac + sc) * 4,
+							  val, ac * 4);
+		if (ret < 0) {
+			return ret;
+		}
+	}
+
+	if (sc == 1) {
+		reg_32 = cpu_to_fdt32(nr_cores * gicr_frame_size);
+		val = &reg_32;
+	} else {
+		reg_64 = cpu_to_fdt64(nr_cores * (uint64_t)gicr_frame_size);
+		val = &reg_64;
+	}
+
+	/*
+	 * The redistributor is described in the second "reg" entry.
+	 * So we have to skip one address and one size cell, then another
+	 * address cell to get to the second size cell.
+	 */
+	return fdt_setprop_inplace_namelen_partial(dtb, offset, "reg", 3,
+						   (ac + sc + ac) * 4,
+						   val, sc * 4);
 }

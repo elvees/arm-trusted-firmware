@@ -127,6 +127,9 @@ For Cortex-A53, the following errata build flags are defined :
    Earlier revisions of the CPU have other errata which require the same
    workaround in software, so they should be covered anyway.
 
+-  ``ERRATA_A53_1530924``: This applies errata 1530924 workaround to all
+   revisions of Cortex-A53 CPU.
+
 For Cortex-A55, the following errata build flags are defined :
 
 -  ``ERRATA_A55_768277``: This applies errata 768277 workaround to Cortex-A55
@@ -146,6 +149,9 @@ For Cortex-A55, the following errata build flags are defined :
 
 -  ``ERRATA_A55_1221012``: This applies errata 1221012 workaround to Cortex-A55
    CPU. This needs to be enabled only for revision <= r1p0 of the CPU.
+
+-  ``ERRATA_A55_1530923``: This applies errata 1530923 workaround to all
+   revisions of Cortex-A55 CPU.
 
 For Cortex-A57, the following errata build flags are defined :
 
@@ -182,11 +188,16 @@ For Cortex-A57, the following errata build flags are defined :
 -  ``ERRATA_A57_859972``: This applies errata 859972 workaround to Cortex-A57
    CPU. This needs to be enabled only for revision <= r1p3 of the CPU.
 
+-  ``ERRATA_A57_1319537``: This applies errata 1319537 workaround to all
+   revisions of Cortex-A57 CPU.
 
 For Cortex-A72, the following errata build flags are defined :
 
 -  ``ERRATA_A72_859971``: This applies errata 859971 workaround to Cortex-A72
    CPU. This needs to be enabled only for revision <= r0p3 of the CPU.
+
+-  ``ERRATA_A72_1319367``: This applies errata 1319367 workaround to all
+   revisions of Cortex-A72 CPU.
 
 For Cortex-A73, the following errata build flags are defined :
 
@@ -227,6 +238,70 @@ For Cortex-A76, the following errata build flags are defined :
 -  ``ERRATA_A76_1275112``: This applies errata 1275112 workaround to Cortex-A76
    CPU. This needs to be enabled only for revision <= r3p0 of the CPU.
 
+-  ``ERRATA_A76_1791580``: This applies errata 1791580 workaround to Cortex-A76
+   CPU. This needs to be enabled only for revision <= r4p0 of the CPU.
+
+-  ``ERRATA_A76_1165522``: This applies errata 1165522 workaround to all
+   revisions of Cortex-A76 CPU. This errata is fixed in r3p0 but due to
+   limitation of errata framework this errata is applied to all revisions
+   of Cortex-A76 CPU.
+
+-  ``ERRATA_A76_1868343``: This applies errata 1868343 workaround to Cortex-A76
+   CPU. This needs to be enabled only for revision <= r4p0 of the CPU.
+
+-  ``ERRATA_A76_1946160``: This applies errata 1946160 workaround to Cortex-A76
+   CPU. This needs to be enabled only for revisions r3p0 - r4p1 of the CPU.
+
+For Cortex-A77, the following errata build flags are defined :
+
+-  ``ERRATA_A77_1508412``: This applies errata 1508412 workaround to Cortex-A77
+   CPU. This needs to be enabled only for revision <= r1p0 of the CPU.
+
+-  ``ERRATA_A77_1925769``: This applies errata 1925769 workaround to Cortex-A77
+   CPU. This needs to be enabled only for revision <= r1p1 of the CPU.
+
+-  ``ERRATA_A77_1946167``: This applies errata 1946167 workaround to Cortex-A77
+   CPU. This needs to be enabled only for revision <= r1p1 of the CPU.
+
+-  ``ERRATA_A77_1791578``: This applies errata 1791578 workaround to Cortex-A77
+   CPU. This needs to be enabled for r0p0, r1p0, and r1p1, it is still open.
+
+For Cortex-A78, the following errata build flags are defined :
+
+-  ``ERRATA_A78_1688305``: This applies errata 1688305 workaround to Cortex-A78
+   CPU. This needs to be enabled only for revision r0p0 - r1p0 of the CPU.
+
+-  ``ERRATA_A78_1941498``: This applies errata 1941498 workaround to Cortex-A78
+   CPU. This needs to be enabled for revisions r0p0, r1p0, and r1p1 of the CPU.
+
+-  ``ERRATA_A78_1951500``: This applies errata 1951500 workaround to Cortex-A78
+   CPU. This needs to be enabled for revisions r1p0 and r1p1, r0p0 has the same
+   issue but there is no workaround for that revision.
+
+-  ``ERRATA_A78_1821534``: This applies errata 1821534 workaround to Cortex-A78
+   CPU. This needs to be enabled for revisions r0p0 and r1p0.
+
+-  ``ERRATA_A78_1952683``: This applies errata 1952683 workaround to Cortex-A78
+   CPU. This needs to be enabled for revision r0p0, it is fixed in r1p0.
+
+-  ``ERRATA_A78_2132060``: This applies errata 2132060 workaround to Cortex-A78
+   CPU. This needs to be enabled for revisions r0p0, r1p0, r1p1, and r1p2. It
+   is still open.
+
+-  ``ERRATA_A78_2242635``: This applies errata 2242635 workaround to Cortex-A78
+   CPU. This needs to be enabled for revisions r1p0, r1p1, and r1p2. The issue
+   is present in r0p0 but there is no workaround. It is still open.
+
+For Cortex-A78 AE, the following errata build flags are defined :
+
+- ``ERRATA_A78_AE_1941500`` : This applies errata 1941500 workaround to Cortex-A78
+   AE CPU. This needs to be enabled for revisions r0p0 and r0p1. This erratum is
+   still open.
+
+- ``ERRATA_A78_AE_1951502`` : This applies errata 1951502 workaround to Cortex-A78
+  AE CPU. This needs to be enabled for revisions r0p0 and r0p1. This erratum is
+  still open.
+
 For Neoverse N1, the following errata build flags are defined :
 
 -  ``ERRATA_N1_1073348``: This applies errata 1073348 workaround to Neoverse-N1
@@ -261,6 +336,110 @@ For Neoverse N1, the following errata build flags are defined :
 
 -  ``ERRATA_N1_1542419``: This applies errata 1542419 workaround to Neoverse-N1
    CPU. This needs to be enabled only for revisions r3p0 - r4p0 of the CPU.
+
+-  ``ERRATA_N1_1868343``: This applies errata 1868343 workaround to Neoverse-N1
+   CPU. This needs to be enabled only for revision <= r4p0 of the CPU.
+
+-  ``ERRATA_N1_1946160``: This applies errata 1946160 workaround to Neoverse-N1
+   CPU. This needs to be enabled for revisions r3p0, r3p1, r4p0, and r4p1, for
+   revisions r0p0, r1p0, and r2p0 there is no workaround.
+
+For Neoverse V1, the following errata build flags are defined :
+
+-  ``ERRATA_V1_1774420``: This applies errata 1774420 workaround to Neoverse-V1
+   CPU. This needs to be enabled only for revisions r0p0 and r1p0, it is fixed
+   in r1p1.
+
+-  ``ERRATA_V1_1791573``: This applies errata 1791573 workaround to Neoverse-V1
+   CPU. This needs to be enabled only for revisions r0p0 and r1p0, it is fixed
+   in r1p1.
+
+-  ``ERRATA_V1_1852267``: This applies errata 1852267 workaround to Neoverse-V1
+   CPU. This needs to be enabled only for revisions r0p0 and r1p0, it is fixed
+   in r1p1.
+
+-  ``ERRATA_V1_1925756``: This applies errata 1925756 workaround to Neoverse-V1
+   CPU. This needs to be enabled for r0p0, r1p0, and r1p1, it is still open.
+
+-  ``ERRATA_V1_1940577``: This applies errata 1940577 workaround to Neoverse-V1
+   CPU. This needs to be enabled only for revision r1p0 and r1p1 of the
+   CPU.
+
+-  ``ERRATA_V1_1966096``: This applies errata 1966096 workaround to Neoverse-V1
+   CPU. This needs to be enabled for revisions r1p0 and r1p1 of the CPU, the
+   issue is present in r0p0 as well but there is no workaround for that
+   revision.  It is still open.
+
+-  ``ERRATA_V1_2139242``: This applies errata 2139242 workaround to Neoverse-V1
+   CPU. This needs to be enabled for revisions r0p0, r1p0, and r1p1 of the
+   CPU.  It is still open.
+
+-  ``ERRATA_V1_2108267``: This applies errata 2108267 workaround to Neoverse-V1
+   CPU. This needs to be enabled for revisions r0p0, r1p0, and r1p1 of the CPU.
+   It is still open.
+
+-  ``ERRATA_V1_2216392``: This applies errata 2216392 workaround to Neoverse-V1
+   CPU. This needs to be enabled for revisions r1p0 and r1p1 of the CPU, the
+   issue is present in r0p0 as well but there is no workaround for that
+   revision.  It is still open.
+
+For Cortex-A710, the following errata build flags are defined :
+
+-  ``ERRATA_A710_1987031``: This applies errata 1987031 workaround to
+   Cortex-A710 CPU. This needs to be enabled only for revisions r0p0, r1p0 and
+   r2p0 of the CPU. It is still open.
+
+-  ``ERRATA_A710_2081180``: This applies errata 2081180 workaround to
+   Cortex-A710 CPU. This needs to be enabled only for revisions r0p0, r1p0 and
+   r2p0 of the CPU. It is still open.
+
+-  ``ERRATA_A710_2055002``: This applies errata 2055002 workaround to
+   Cortex-A710 CPU. This needs to be enabled for revisions r1p0, r2p0 of the CPU
+   and is still open.
+
+-  ``ERRATA_A710_2017096``: This applies errata 2017096 workaround to
+   Cortex-A710 CPU. This needs to be enabled for revisions r0p0, r1p0 and r2p0
+   of the CPU and is still open.
+
+-  ``ERRATA_A710_2083908``: This applies errata 2083908 workaround to
+   Cortex-A710 CPU. This needs to be enabled for revision r2p0 of the CPU and
+   is still open.
+
+-  ``ERRATA_A710_2058056``: This applies errata 2058056 workaround to
+   Cortex-A710 CPU. This needs to be enabled for revisions r0p0, r1p0 and r2p0
+   of the CPU and is still open.
+
+For Neoverse N2, the following errata build flags are defined :
+
+-  ``ERRATA_N2_2002655``: This applies errata 2002655 workaround to Neoverse-N2
+   CPU. This needs to be enabled for revision r0p0 of the CPU, it is still open.
+
+-  ``ERRATA_N2_2067956``: This applies errata 2067956 workaround to Neoverse-N2
+   CPU. This needs to be enabled for revision r0p0 of the CPU and is still open.
+
+-  ``ERRATA_N2_2025414``: This applies errata 2025414 workaround to Neoverse-N2
+   CPU. This needs to be enabled for revision r0p0 of the CPU and is still open.
+
+-  ``ERRATA_N2_2189731``: This applies errata 2189731 workaround to Neoverse-N2
+   CPU. This needs to be enabled for revision r0p0 of the CPU and is still open.
+
+-  ``ERRATA_N2_2138956``: This applies errata 2138956 workaround to Neoverse-N2
+   CPU. This needs to be enabled for revision r0p0 of the CPU and is still open.
+
+-  ``ERRATA_N2_2138953``: This applies errata 2138953 workaround to Neoverse-N2
+   CPU. This needs to be enabled for revision r0p0 of the CPU and is still open.
+
+-  ``ERRATA_N2_2242415``: This applies errata 2242415 workaround to Neoverse-N2
+   CPU. This needs to be enabled for revision r0p0 of the CPU and is still open.
+
+-  ``ERRATA_N2_2138958``: This applies errata 2138958 workaround to Neoverse-N2
+   CPU. This needs to be enabled for revision r0p0 of the CPU and is still open.
+
+-  ``ERRATA_N2_2242400``: This applies errata 2242400 workaround to Neoverse-N2
+   CPU. This needs to be enabled for revision r0p0 of the CPU and is still open.
+
+-  ``ERRATA_N2_2280757``: This applies errata 2280757 workaround to Neoverse-N2
+   CPU. This needs to be enabled for revision r0p0 of the CPU and is still open.
 
 DSU Errata Workarounds
 ----------------------
@@ -318,9 +497,22 @@ architecture that can be enabled by the platform as desired.
    as recommended in section "4.7 Non-Temporal Loads/Stores" of the
    `Cortex-A57 Software Optimization Guide`_.
 
+- ''A57_ENABLE_NON_CACHEABLE_LOAD_FWD'': This flag enables non-cacheable
+   streaming enhancement feature for Cortex-A57 CPUs. Platforms can set
+   this bit only if their memory system meets the requirement that cache
+   line fill requests from the Cortex-A57 processor are atomic. Each
+   Cortex-A57 based platform must make its own decision on whether to use
+   the optimization. This flag is disabled by default.
+
+-  ``NEOVERSE_Nx_EXTERNAL_LLC``: This flag indicates that an external last
+   level cache(LLC) is present in the system, and that the DataSource field
+   on the master CHI interface indicates when data is returned from the LLC.
+   This is used to control how the LL_CACHE* PMU events count.
+   Default value is 0 (Disabled).
+
 --------------
 
-*Copyright (c) 2014-2019, Arm Limited and Contributors. All rights reserved.*
+*Copyright (c) 2014-2021, Arm Limited and Contributors. All rights reserved.*
 
 .. _CVE-2017-5715: http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2017-5715
 .. _CVE-2018-3639: http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2018-3639

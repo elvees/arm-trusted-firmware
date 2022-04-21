@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2019, ARM Limited and Contributors. All rights reserved.
+ * Copyright (c) 2013-2020, ARM Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -9,10 +9,6 @@
 #include <arch.h>
 #include <common/asm_macros_common.S>
 #include <lib/spinlock.h>
-
-#if ENABLE_BTI && !ARM_ARCH_AT_LEAST(8, 5)
-#error Branch Target Identification requires ARM_ARCH_MINOR >= 5
-#endif
 
 /*
  * TLBI instruction with type specifier that implements the workaround for
@@ -216,6 +212,20 @@
 #endif
 	msr	\reg, x1
 	ret
+	.endm
+
+	/*
+	 * Macro for mitigating against speculative execution beyond ERET. Uses the
+	 * speculation barrier instruction introduced by FEAT_SB, if it's enabled.
+	 */
+	.macro exception_return
+	eret
+#if ENABLE_FEAT_SB
+	sb
+#else
+	dsb	nsh
+	isb
+#endif
 	.endm
 
 #endif /* ASM_MACROS_S */

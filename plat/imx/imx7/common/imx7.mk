@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2019, ARM Limited and Contributors. All rights reserved.
+# Copyright (c) 2018-2020, ARM Limited and Contributors. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-3-Clause
 #
@@ -16,6 +16,7 @@ PLAT_INCLUDES		:=	-Idrivers/imx/uart			\
 				-Iplat/imx/imx7/include			\
 				-Idrivers/imx/timer			\
 				-Idrivers/imx/usdhc			\
+				-Iinclude/common/tbbr
 
 # Translation tables library
 include lib/xlat_tables_v2/xlat_tables.mk
@@ -46,7 +47,7 @@ BL2_SOURCES		+=	common/desc_image_load.c			\
 				plat/imx/imx7/common/imx7_bl2_el3_common.c	\
 				plat/imx/imx7/common/imx7_helpers.S		\
 				plat/imx/imx7/common/imx7_image_load.c		\
-				plat/imx/imx7/common/imx7_io_storage.c		\
+				plat/imx/common/imx_io_storage.c		\
 				plat/imx/common/aarch32/imx_uart_console.S	\
 				${XLAT_TABLES_LIB_SRCS}
 
@@ -58,12 +59,13 @@ include drivers/auth/mbedtls/mbedtls_x509.mk
 AUTH_SOURCES	:=	drivers/auth/auth_mod.c			\
 			drivers/auth/crypto_mod.c		\
 			drivers/auth/img_parser_mod.c		\
-			drivers/auth/tbbr/tbbr_cot.c
+			drivers/auth/tbbr/tbbr_cot_common.c
 
 BL2_SOURCES		+=	${AUTH_SOURCES}					\
 				plat/common/tbbr/plat_tbbr.c			\
 				plat/imx/imx7/common/imx7_trusted_boot.c	\
-				plat/imx/imx7/common/imx7_rotpk.S
+				plat/imx/imx7/common/imx7_rotpk.S		\
+				drivers/auth/tbbr/tbbr_cot_bl2.c
 
 ROT_KEY             = $(BUILD_PLAT)/rot_key.pem
 ROTPK_HASH          = $(BUILD_PLAT)/rotpk_sha256.bin

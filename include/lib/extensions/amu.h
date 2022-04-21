@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2018, ARM Limited and Contributors. All rights reserved.
+ * Copyright (c) 2017-2021, ARM Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -10,39 +10,38 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include <context.h>
+
 #include <platform_def.h>
 
-#include <lib/cassert.h>
-#include <lib/utils_def.h>
-
-/* All group 0 counters */
-#define AMU_GROUP0_COUNTERS_MASK	U(0xf)
-
-#ifdef PLAT_AMU_GROUP1_COUNTERS_MASK
-#define AMU_GROUP1_COUNTERS_MASK	PLAT_AMU_GROUP1_COUNTERS_MASK
+#if __aarch64__
+void amu_enable(bool el2_unused, cpu_context_t *ctx);
 #else
-#define AMU_GROUP1_COUNTERS_MASK	U(0)
-#endif
-
-#ifdef PLAT_AMU_GROUP1_NR_COUNTERS
-#define AMU_GROUP1_NR_COUNTERS		PLAT_AMU_GROUP1_NR_COUNTERS
-#else
-#define AMU_GROUP1_NR_COUNTERS		U(0)
-#endif
-
-CASSERT(AMU_GROUP1_COUNTERS_MASK <= 0xffff, invalid_amu_group1_counters_mask);
-CASSERT(AMU_GROUP1_NR_COUNTERS <= 16, invalid_amu_group1_nr_counters);
-
-bool amu_supported(void);
 void amu_enable(bool el2_unused);
+#endif
 
-/* Group 0 configuration helpers */
-uint64_t amu_group0_cnt_read(int idx);
-void amu_group0_cnt_write(int idx, uint64_t val);
+#if ENABLE_AMU_AUXILIARY_COUNTERS
+/*
+ * AMU data for a single core.
+ */
+struct amu_core {
+	uint16_t enable; /* Mask of auxiliary counters to enable */
+};
 
-/* Group 1 configuration helpers */
-uint64_t amu_group1_cnt_read(int idx);
-void amu_group1_cnt_write(int idx, uint64_t val);
-void amu_group1_set_evtype(int idx, unsigned int val);
+/*
+ * Topological platform data specific to the AMU.
+ */
+struct amu_topology {
+	struct amu_core cores[PLATFORM_CORE_COUNT]; /* Per-core data */
+};
+
+#if !ENABLE_AMU_FCONF
+/*
+ * Retrieve the platform's AMU topology. A `NULL` return value is treated as a
+ * non-fatal error, in which case no auxiliary counters will be enabled.
+ */
+const struct amu_topology *plat_amu_topology(void);
+#endif /* ENABLE_AMU_FCONF */
+#endif /* ENABLE_AMU_AUXILIARY_COUNTERS */
 
 #endif /* AMU_H */

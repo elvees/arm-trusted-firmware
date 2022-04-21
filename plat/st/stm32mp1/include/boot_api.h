@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2019, STMicroelectronics - All Rights Reserved
+ * Copyright (c) 2017-2021, STMicroelectronics - All Rights Reserved
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -32,6 +32,18 @@
 
 /* Boot occurred on EMMC */
 #define BOOT_API_CTX_BOOT_INTERFACE_SEL_FLASH_EMMC		0x2U
+
+/* Boot occurred on FMC */
+#define BOOT_API_CTX_BOOT_INTERFACE_SEL_FLASH_NAND_FMC		0x3U
+
+/* Boot occurred on QSPI NOR */
+#define BOOT_API_CTX_BOOT_INTERFACE_SEL_FLASH_NOR_QSPI		0x4U
+
+/* Boot occurred on USB */
+#define BOOT_API_CTX_BOOT_INTERFACE_SEL_SERIAL_USB		0x6U
+
+/* Boot occurred on QSPI NAND */
+#define BOOT_API_CTX_BOOT_INTERFACE_SEL_FLASH_NAND_QSPI		0x7U
 
 /**
  * @brief  Possible value of boot context field 'EmmcXferStatus'
@@ -124,7 +136,7 @@
 /* Closed = OTP_CFG0[6] */
 #define BOOT_API_OTP_MODE_CLOSED_BIT_POS			6
 
-#define BOOT_API_RETURN_OK					0x66U
+#define BOOT_API_RETURN_OK					0x77U
 
 /*
  * Boot Context related definitions

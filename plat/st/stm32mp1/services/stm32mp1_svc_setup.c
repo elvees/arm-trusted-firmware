@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2019, STMicroelectronics - All Rights Reserved
+ * Copyright (c) 2014-2021, STMicroelectronics - All Rights Reserved
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -9,6 +9,7 @@
 
 #include <common/debug.h>
 #include <common/runtime_svc.h>
+#include <drivers/scmi-msg.h>
 #include <lib/psci/psci.h>
 #include <tools_share/uuid.h>
 
@@ -65,9 +66,16 @@ static uintptr_t stm32mp1_svc_smc_handler(uint32_t smc_fid, u_register_t x1,
 		ret2_enabled = true;
 		break;
 
+	case STM32_SIP_SMC_SCMI_AGENT0:
+		scmi_smt_fastcall_smc_entry(0);
+		break;
+	case STM32_SIP_SMC_SCMI_AGENT1:
+		scmi_smt_fastcall_smc_entry(1);
+		break;
+
 	default:
 		WARN("Unimplemented STM32MP1 Service Call: 0x%x\n", smc_fid);
-		ret1 = SMC_UNK;
+		ret1 = STM32_SMC_NOT_SUPPORTED;
 		break;
 	}
 

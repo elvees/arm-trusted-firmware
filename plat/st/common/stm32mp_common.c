@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2019, ARM Limited and Contributors. All rights reserved.
+ * Copyright (c) 2015-2021, ARM Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -12,7 +12,12 @@
 #include <arch_helpers.h>
 #include <common/debug.h>
 #include <drivers/st/stm32mp_clkfunc.h>
+#include <lib/smccc.h>
+#include <lib/xlat_tables/xlat_tables_v2.h>
 #include <plat/common/platform.h>
+#include <services/arm_arch_svc.h>
+
+#define HEADER_VERSION_MAJOR_MASK	GENMASK(23, 16)
 
 uintptr_t plat_get_ns_image_entrypoint(void)
 {
@@ -25,10 +30,14 @@ unsigned int plat_get_syscnt_freq2(void)
 }
 
 static uintptr_t boot_ctx_address;
+static uint16_t boot_itf_selected;
 
 void stm32mp_save_boot_ctx_address(uintptr_t address)
 {
+	boot_api_context_t *boot_context = (boot_api_context_t *)address;
+
 	boot_ctx_address = address;
+	boot_itf_selected = boot_context->boot_interface_selected;
 }
 
 uintptr_t stm32mp_get_boot_ctx_address(void)
@@ -36,56 +45,29 @@ uintptr_t stm32mp_get_boot_ctx_address(void)
 	return boot_ctx_address;
 }
 
+uint16_t stm32mp_get_boot_itf_selected(void)
+{
+	return boot_itf_selected;
+}
+
 uintptr_t stm32mp_ddrctrl_base(void)
 {
-	static uintptr_t ddrctrl_base;
-
-	if (ddrctrl_base == 0) {
-		ddrctrl_base = dt_get_ddrctrl_base();
-
-		assert(ddrctrl_base == DDRCTRL_BASE);
-	}
-
-	return ddrctrl_base;
+	return DDRCTRL_BASE;
 }
 
 uintptr_t stm32mp_ddrphyc_base(void)
 {
-	static uintptr_t ddrphyc_base;
-
-	if (ddrphyc_base == 0) {
-		ddrphyc_base = dt_get_ddrphyc_base();
-
-		assert(ddrphyc_base == DDRPHYC_BASE);
-	}
-
-	return ddrphyc_base;
+	return DDRPHYC_BASE;
 }
 
 uintptr_t stm32mp_pwr_base(void)
 {
-	static uintptr_t pwr_base;
-
-	if (pwr_base == 0) {
-		pwr_base = dt_get_pwr_base();
-
-		assert(pwr_base == PWR_BASE);
-	}
-
-	return pwr_base;
+	return PWR_BASE;
 }
 
 uintptr_t stm32mp_rcc_base(void)
 {
-	static uintptr_t rcc_base;
-
-	if (rcc_base == 0) {
-		rcc_base = fdt_rcc_read_addr();
-
-		assert(rcc_base == RCC_BASE);
-	}
-
-	return rcc_base;
+	return RCC_BASE;
 }
 
 bool stm32mp_lock_available(void)
@@ -96,28 +78,7 @@ bool stm32mp_lock_available(void)
 	return (read_sctlr() & c_m_bits) == c_m_bits;
 }
 
-uintptr_t stm32_get_gpio_bank_base(unsigned int bank)
-{
-	if (bank == GPIO_BANK_Z) {
-		return GPIOZ_BASE;
-	}
-
-	assert(GPIO_BANK_A == 0 && bank <= GPIO_BANK_K);
-
-	return GPIOA_BASE + (bank * GPIO_BANK_OFFSET);
-}
-
-uint32_t stm32_get_gpio_bank_offset(unsigned int bank)
-{
-	if (bank == GPIO_BANK_Z) {
-		return 0;
-	}
-
-	assert(GPIO_BANK_A == 0 && bank <= GPIO_BANK_K);
-
-	return bank * GPIO_BANK_OFFSET;
-}
-
+#if STM32MP_USE_STM32IMAGE
 int stm32mp_check_header(boot_api_image_header_t *header, uintptr_t buffer)
 {
 	uint32_t i;
@@ -134,7 +95,8 @@ int stm32mp_check_header(boot_api_image_header_t *header, uintptr_t buffer)
 		return -EINVAL;
 	}
 
-	if (header->header_version != BOOT_API_HEADER_VERSION) {
+	if ((header->header_version & HEADER_VERSION_MAJOR_MASK) !=
+	    (BOOT_API_HEADER_VERSION & HEADER_VERSION_MAJOR_MASK)) {
 		ERROR("Header version\n");
 		return -EINVAL;
 	}
@@ -150,4 +112,51 @@ int stm32mp_check_header(boot_api_image_header_t *header, uintptr_t buffer)
 	}
 
 	return 0;
+}
+#endif /* STM32MP_USE_STM32IMAGE */
+
+int stm32mp_map_ddr_non_cacheable(void)
+{
+	return  mmap_add_dynamic_region(STM32MP_DDR_BASE, STM32MP_DDR_BASE,
+					STM32MP_DDR_MAX_SIZE,
+					MT_NON_CACHEABLE | MT_RW | MT_SECURE);
+}
+
+int stm32mp_unmap_ddr(void)
+{
+	return  mmap_remove_dynamic_region(STM32MP_DDR_BASE,
+					   STM32MP_DDR_MAX_SIZE);
+}
+
+/*****************************************************************************
+ * plat_is_smccc_feature_available() - This function checks whether SMCCC
+ *                                     feature is availabile for platform.
+ * @fid: SMCCC function id
+ *
+ * Return SMC_ARCH_CALL_SUCCESS if SMCCC feature is available and
+ * SMC_ARCH_CALL_NOT_SUPPORTED otherwise.
+ *****************************************************************************/
+int32_t plat_is_smccc_feature_available(u_register_t fid)
+{
+	switch (fid) {
+	case SMCCC_ARCH_SOC_ID:
+		return SMC_ARCH_CALL_SUCCESS;
+	default:
+		return SMC_ARCH_CALL_NOT_SUPPORTED;
+	}
+}
+
+/* Get SOC version */
+int32_t plat_get_soc_version(void)
+{
+	uint32_t chip_id = stm32mp_get_chip_dev_id();
+	uint32_t manfid = SOC_ID_SET_JEP_106(JEDEC_ST_BKID, JEDEC_ST_MFID);
+
+	return (int32_t)(manfid | (chip_id & SOC_ID_IMPL_DEF_MASK));
+}
+
+/* Get SOC revision */
+int32_t plat_get_soc_revision(void)
+{
+	return (int32_t)(stm32mp_get_chip_version() & SOC_ID_REV_MASK);
 }

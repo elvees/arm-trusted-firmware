@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2019, ARM Limited and Contributors. All rights reserved.
+ * Copyright (c) 2018-2021, ARM Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -15,6 +15,7 @@
 #include <context.h>
 
 	.globl	handle_lower_el_ea_esb
+	.globl  handle_lower_el_async_ea
 	.globl	enter_lower_el_sync_ea
 	.globl	enter_lower_el_async_ea
 
@@ -102,9 +103,11 @@ func enter_lower_el_sync_ea
 	/* Setup exception class and syndrome arguments for platform handler */
 	mov	x0, #ERROR_EA_SYNC
 	mrs	x1, esr_el3
-	adr	x30, el3_exit
-	b	delegate_sync_ea
+	bl	delegate_sync_ea
 
+	/* el3_exit assumes SP_EL0 on entry */
+	msr	spsel, #MODE_SP_EL0
+	b	el3_exit
 2:
 	ldp	x0, x1, [sp, #CTX_GPREGS_OFFSET + CTX_GPREG_X0]
 	ldp	x2, x3, [sp, #CTX_GPREGS_OFFSET + CTX_GPREG_X2]
@@ -131,6 +134,7 @@ func enter_lower_el_async_ea
 	 */
 	str	x30, [sp, #CTX_GPREGS_OFFSET + CTX_GPREG_LR]
 
+handle_lower_el_async_ea:
 	/*
 	 * Save general purpose and ARMv8.3-PAuth registers (if enabled).
 	 * If Secure Cycle Counter is not disabled in MDCR_EL3 when
@@ -146,8 +150,11 @@ func enter_lower_el_async_ea
 	/* Setup exception class and syndrome arguments for platform handler */
 	mov	x0, #ERROR_EA_ASYNC
 	mrs	x1, esr_el3
-	adr	x30, el3_exit
-	b	delegate_async_ea
+	bl	delegate_async_ea
+
+	/* el3_exit assumes SP_EL0 on entry */
+	msr	spsel, #MODE_SP_EL0
+	b	el3_exit
 endfunc enter_lower_el_async_ea
 
 

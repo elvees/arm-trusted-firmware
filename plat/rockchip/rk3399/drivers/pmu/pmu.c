@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2019, ARM Limited and Contributors. All rights reserved.
+ * Copyright (c) 2016-2021, ARM Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -398,6 +398,25 @@ static void pmu_power_domains_resume(void)
 		pmu_set_power_domain(PD_PERIHP, pmu_pd_on);
 	qos_restore();
 	clk_gate_con_restore();
+}
+
+void pmu_power_domains_on(void)
+{
+	clk_gate_con_disable();
+	pmu_set_power_domain(PD_VDU, pmu_pd_on);
+	pmu_set_power_domain(PD_VCODEC, pmu_pd_on);
+	pmu_set_power_domain(PD_RGA, pmu_pd_on);
+	pmu_set_power_domain(PD_IEP, pmu_pd_on);
+	pmu_set_power_domain(PD_EDP, pmu_pd_on);
+	pmu_set_power_domain(PD_GMAC, pmu_pd_on);
+	pmu_set_power_domain(PD_SDIOAUDIO, pmu_pd_on);
+	pmu_set_power_domain(PD_HDCP, pmu_pd_on);
+	pmu_set_power_domain(PD_ISP1, pmu_pd_on);
+	pmu_set_power_domain(PD_ISP0, pmu_pd_on);
+	pmu_set_power_domain(PD_VO, pmu_pd_on);
+	pmu_set_power_domain(PD_TCPD1, pmu_pd_on);
+	pmu_set_power_domain(PD_TCPD0, pmu_pd_on);
+	pmu_set_power_domain(PD_GPU, pmu_pd_on);
 }
 
 void rk3399_flush_l2_b(void)
@@ -1305,6 +1324,7 @@ void wdt_register_save(void)
 		store_wdt0[i] = mmio_read_32(WDT0_BASE + i * 4);
 		store_wdt1[i] = mmio_read_32(WDT1_BASE + i * 4);
 	}
+	pmu_enable_watchdog0 = (uint8_t) store_wdt0[0] & 0x1;
 }
 
 void wdt_register_restore(void)

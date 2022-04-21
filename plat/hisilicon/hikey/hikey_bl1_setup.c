@@ -1,11 +1,13 @@
 /*
- * Copyright (c) 2017-2018, ARM Limited and Contributors. All rights reserved.
+ * Copyright (c) 2017-2021, ARM Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
 #include <assert.h>
 #include <errno.h>
+#include <inttypes.h>
+#include <stdint.h>
 #include <string.h>
 
 #include <arch_helpers.h>
@@ -26,7 +28,8 @@
 
 /* Data structure which holds the extents of the trusted RAM for BL1 */
 static meminfo_t bl1_tzram_layout;
-static console_pl011_t console;
+static console_t console;
+static struct mmc_device_info mmc_info;
 
 enum {
 	BOOT_NORMAL = 0,
@@ -78,7 +81,6 @@ void bl1_plat_arch_setup(void)
 void bl1_platform_setup(void)
 {
 	dw_mmc_params_t params;
-	struct mmc_device_info info;
 
 	assert((HIKEY_BL1_MMC_DESC_BASE >= SRAM_BASE) &&
 	       ((SRAM_BASE + SRAM_SIZE) >=
@@ -99,8 +101,8 @@ void bl1_platform_setup(void)
 	params.clk_rate = 24 * 1000 * 1000;
 	params.bus_width = MMC_BUS_WIDTH_8;
 	params.flags = MMC_FLAG_CMD23;
-	info.mmc_dev_type = MMC_IS_EMMC;
-	dw_mmc_init(&params, &info);
+	mmc_info.mmc_dev_type = MMC_IS_EMMC;
+	dw_mmc_init(&params, &mmc_info);
 
 	hikey_io_setup();
 }
@@ -155,7 +157,7 @@ void bl1_plat_set_ep_info(unsigned int image_id,
 		__asm__ volatile ("msr	cpacr_el1, %0" : : "r"(data));
 		__asm__ volatile ("mrs	%0, cpacr_el1" : "=r"(data));
 	} while ((data & (3 << 20)) != (3 << 20));
-	INFO("cpacr_el1:0x%llx\n", data);
+	INFO("cpacr_el1:0x%" PRIx64 "\n", data);
 
 	ep_info->args.arg0 = 0xffff & read_mpidr();
 	ep_info->spsr = SPSR_64(MODE_EL1, MODE_SP_ELX,

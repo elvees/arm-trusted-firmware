@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2019, ARM Limited and Contributors. All rights reserved.
+ * Copyright (c) 2017-2021, ARM Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -16,7 +16,7 @@
 
 /* Supported SCMI Protocol Versions */
 #define SCMI_AP_CORE_PROTO_VER			MAKE_SCMI_VERSION(1, 0)
-#define SCMI_PWR_DMN_PROTO_VER			MAKE_SCMI_VERSION(1, 0)
+#define SCMI_PWR_DMN_PROTO_VER			MAKE_SCMI_VERSION(2, 0)
 #define SCMI_SYS_PWR_PROTO_VER			MAKE_SCMI_VERSION(1, 0)
 
 #define GET_SCMI_MAJOR_VER(ver)			(((ver) >> 16) & 0xffff)
@@ -25,10 +25,16 @@
 #define MAKE_SCMI_VERSION(maj, min)	\
 			((((maj) & 0xffff) << 16) | ((min) & 0xffff))
 
-/* Macro to check if the driver is compatible with the SCMI version reported */
+/*
+ * Check that the driver's version is same or higher than the reported SCMI
+ * version. We accept lower major version numbers, as all affected protocols
+ * so far stay backwards compatible. This might need to be revisited in the
+ * future.
+ */
 #define is_scmi_version_compatible(drv, scmi)				\
+	((GET_SCMI_MAJOR_VER(drv) > GET_SCMI_MAJOR_VER(scmi)) ||	\
 	((GET_SCMI_MAJOR_VER(drv) == GET_SCMI_MAJOR_VER(scmi)) &&	\
-	(GET_SCMI_MINOR_VER(drv) <= GET_SCMI_MINOR_VER(scmi)))
+	(GET_SCMI_MINOR_VER(drv) <= GET_SCMI_MINOR_VER(scmi))))
 
 /* SCMI Protocol identifiers */
 #define SCMI_PWR_DMN_PROTO_ID			0x11
@@ -162,7 +168,7 @@ int scmi_ap_core_set_reset_addr(void *p, uint64_t reset_addr, uint32_t attr);
 int scmi_ap_core_get_reset_addr(void *p, uint64_t *reset_addr, uint32_t *attr);
 
 /* API to get the platform specific SCMI channel information. */
-scmi_channel_plat_info_t *plat_css_get_scmi_info(void);
+scmi_channel_plat_info_t *plat_css_get_scmi_info(int channel_id);
 
 /* API to override default PSCI callbacks for platforms that support SCMI. */
 const plat_psci_ops_t *css_scmi_override_pm_ops(plat_psci_ops_t *ops);

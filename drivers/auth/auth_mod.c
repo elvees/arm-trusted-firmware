@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2019, ARM Limited and Contributors. All rights reserved.
+ * Copyright (c) 2015-2021, ARM Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -16,6 +16,8 @@
 #include <drivers/auth/auth_mod.h>
 #include <drivers/auth/crypto_mod.h>
 #include <drivers/auth/img_parser_mod.h>
+#include <drivers/fwu/fwu.h>
+#include <lib/fconf/fconf_tbbr_getter.h>
 #include <plat/common/platform.h>
 
 /* ASN.1 tags */
@@ -30,9 +32,6 @@
 
 #pragma weak plat_set_nv_ctr2
 
-/* Pointer to CoT */
-extern const auth_img_desc_t *const *const cot_desc_ptr;
-extern unsigned int auth_img_flags[MAX_NUMBER_IDS];
 
 static int cmp_auth_param_type_desc(const auth_param_type_desc_t *a,
 		const auth_param_type_desc_t *b)
@@ -224,20 +223,27 @@ static int auth_signature(const auth_method_param_sig_t *param,
  * To protect the system against rollback, the platform includes a non-volatile
  * counter whose value can only be increased. All certificates include a counter
  * value that should not be lower than the value stored in the platform. If the
- * value is larger, the counter in the platform must be updated to the new
- * value.
+ * value is larger, the counter in the platform must be updated to the new value
+ * (provided it has been authenticated).
  *
  * Return: 0 = success, Otherwise = error
+ * Returns additionally,
+ * cert_nv_ctr -> NV counter value present in the certificate
+ * need_nv_ctr_upgrade = 0 -> platform NV counter upgrade is not needed
+ * need_nv_ctr_upgrade = 1 -> platform NV counter upgrade is needed
  */
 static int auth_nvctr(const auth_method_param_nv_ctr_t *param,
 		      const auth_img_desc_t *img_desc,
-		      void *img, unsigned int img_len)
+		      void *img, unsigned int img_len,
+		      unsigned int *cert_nv_ctr,
+		      bool *need_nv_ctr_upgrade)
 {
 	char *p;
 	void *data_ptr = NULL;
 	unsigned int data_len, len, i;
-	unsigned int cert_nv_ctr, plat_nv_ctr;
+	unsigned int plat_nv_ctr;
 	int rc = 0;
+	bool is_trial_run = false;
 
 	/* Get the counter value from current image. The AM expects the IPM
 	 * to return the counter value as a DER encoded integer */
@@ -267,22 +273,23 @@ static int auth_nvctr(const auth_method_param_nv_ctr_t *param,
 	}
 
 	/* Convert to unsigned int. This code is for a little-endian CPU */
-	cert_nv_ctr = 0;
+	*cert_nv_ctr = 0;
 	for (i = 0; i < len; i++) {
-		cert_nv_ctr = (cert_nv_ctr << 8) | *p++;
+		*cert_nv_ctr = (*cert_nv_ctr << 8) | *p++;
 	}
 
 	/* Get the counter from the platform */
 	rc = plat_get_nv_ctr(param->plat_nv_ctr->cookie, &plat_nv_ctr);
 	return_if_error(rc);
 
-	if (cert_nv_ctr < plat_nv_ctr) {
+	if (*cert_nv_ctr < plat_nv_ctr) {
 		/* Invalid NV-counter */
 		return 1;
-	} else if (cert_nv_ctr > plat_nv_ctr) {
-		rc = plat_set_nv_ctr2(param->plat_nv_ctr->cookie,
-			img_desc, cert_nv_ctr);
-		return_if_error(rc);
+	} else if (*cert_nv_ctr > plat_nv_ctr) {
+#if PSA_FWU_SUPPORT && IMAGE_BL2
+		is_trial_run = fwu_is_trial_run_state();
+#endif /* PSA_FWU_SUPPORT && IMAGE_BL2 */
+		*need_nv_ctr_upgrade = !is_trial_run;
 	}
 
 	return 0;
@@ -305,9 +312,8 @@ int auth_mod_get_parent_id(unsigned int img_id, unsigned int *parent_id)
 	const auth_img_desc_t *img_desc = NULL;
 
 	assert(parent_id != NULL);
-
 	/* Get the image descriptor */
-	img_desc = cot_desc_ptr[img_id];
+	img_desc = FCONF_GET_PROPERTY(tbbr, cot, img_id);
 
 	/* Check if the image has no parent (ROT) */
 	if (img_desc->parent == NULL) {
@@ -354,9 +360,13 @@ int auth_mod_verify_img(unsigned int img_id,
 	void *param_ptr;
 	unsigned int param_len;
 	int rc, i;
+	unsigned int cert_nv_ctr = 0;
+	bool need_nv_ctr_upgrade = false;
+	bool sig_auth_done = false;
+	const auth_method_param_nv_ctr_t *nv_ctr_param = NULL;
 
 	/* Get the image descriptor from the chain of trust */
-	img_desc = cot_desc_ptr[img_id];
+	img_desc = FCONF_GET_PROPERTY(tbbr, cot, img_id);
 
 	/* Ask the parser to check the image integrity */
 	rc = img_parser_check_integrity(img_desc->img_type, img_ptr, img_len);
@@ -379,16 +389,29 @@ int auth_mod_verify_img(unsigned int img_id,
 		case AUTH_METHOD_SIG:
 			rc = auth_signature(&auth_method->param.sig,
 					img_desc, img_ptr, img_len);
+			sig_auth_done = true;
 			break;
 		case AUTH_METHOD_NV_CTR:
-			rc = auth_nvctr(&auth_method->param.nv_ctr,
-					img_desc, img_ptr, img_len);
+			nv_ctr_param = &auth_method->param.nv_ctr;
+			rc = auth_nvctr(nv_ctr_param,
+					img_desc, img_ptr, img_len,
+					&cert_nv_ctr, &need_nv_ctr_upgrade);
 			break;
 		default:
 			/* Unknown authentication method */
 			rc = 1;
 			break;
 		}
+		return_if_error(rc);
+	}
+
+	/*
+	 * Do platform NV counter upgrade only if the certificate gets
+	 * authenticated, and platform NV-counter upgrade is needed.
+	 */
+	if (need_nv_ctr_upgrade && sig_auth_done) {
+		rc = plat_set_nv_ctr2(nv_ctr_param->plat_nv_ctr->cookie,
+				      img_desc, cert_nv_ctr);
 		return_if_error(rc);
 	}
 

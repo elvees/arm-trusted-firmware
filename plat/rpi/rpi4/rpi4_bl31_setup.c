@@ -5,6 +5,8 @@
  */
 
 #include <assert.h>
+#include <inttypes.h>
+#include <stdint.h>
 
 #include <libfdt.h>
 
@@ -17,6 +19,7 @@
 #include <lib/xlat_tables/xlat_tables_v2.h>
 #include <plat/common/platform.h>
 #include <common/fdt_fixup.h>
+#include <common/fdt_wrappers.h>
 #include <libfdt.h>
 
 #include <drivers/arm/gicv2.h>
@@ -119,8 +122,6 @@ void bl31_early_platform_setup2(u_register_t arg0, u_register_t arg1,
 				u_register_t arg2, u_register_t arg3)
 
 {
-	uint32_t div_reg;
-
 	/*
 	 * LOCAL_CONTROL:
 	 * Bit 9 clear: Increment by 1 (vs. 2).
@@ -134,18 +135,8 @@ void bl31_early_platform_setup2(u_register_t arg0, u_register_t arg1,
 	/* Early GPU firmware revisions need a little break here. */
 	ldelay(100000);
 
-	/*
-	 * Initialize the console to provide early debug support.
-	 * Different GPU firmware revisions set up the VPU divider differently,
-	 * so read the actual divider register to learn the UART base clock
-	 * rate. The divider is encoded as a 12.12 fixed point number, but we
-	 * just care about the integer part of it.
-	 */
-	div_reg = mmio_read_32(RPI4_CLOCK_BASE + RPI4_VPU_CLOCK_DIVIDER);
-	div_reg = (div_reg >> 12) & 0xfff;
-	if (div_reg == 0)
-		div_reg = 1;
-	rpi3_console_init(PLAT_RPI4_VPU_CLK_RATE / div_reg);
+	/* Initialize the console to provide early debug support. */
+	rpi3_console_init();
 
 	bl33_image_ep_info.pc = plat_get_ns_image_entrypoint();
 	bl33_image_ep_info.spsr = rpi3_get_spsr_for_bl33_entry();
@@ -212,11 +203,42 @@ void bl31_plat_arch_setup(void)
 	enable_mmu_el3(0);
 }
 
-static uint32_t dtb_size(const void *dtb)
+/*
+ * Remove the FDT /memreserve/ entry that covers the region at the very
+ * beginning of memory (if that exists). This is where the secondaries
+ * originally spin, but we pull them out there.
+ * Having overlapping /reserved-memory and /memreserve/ regions confuses
+ * the Linux kernel, so we need to get rid of this one.
+ */
+static void remove_spintable_memreserve(void *dtb)
 {
-	const uint32_t *dtb_header = dtb;
+	uint64_t addr, size;
+	int regions = fdt_num_mem_rsv(dtb);
+	int i;
 
-	return fdt32_to_cpu(dtb_header[1]);
+	for (i = 0; i < regions; i++) {
+		if (fdt_get_mem_rsv(dtb, i, &addr, &size) != 0) {
+			return;
+		}
+		if (size == 0U) {
+			return;
+		}
+		/* We only look for the region at the beginning of DRAM. */
+		if (addr != 0U) {
+			continue;
+		}
+		/*
+		 * Currently the region in the existing DTs is exactly 4K
+		 * in size. Should this value ever change, there is probably
+		 * a reason for that, so inform the user about this.
+		 */
+		if (size == 4096U) {
+			fdt_del_mem_rsv(dtb, i);
+			return;
+		}
+		WARN("Keeping unknown /memreserve/ region at 0, size: %" PRId64 "\n",
+		     size);
+	}
 }
 
 static void rpi4_prepare_dtb(void)
@@ -245,7 +267,11 @@ static void rpi4_prepare_dtb(void)
 		return;
 	}
 
-	/* Reserve memory used by Trusted Firmware. */
+	/*
+	 * Remove the original reserved region (used for the spintable), and
+	 * replace it with a region describing the whole of Trusted Firmware.
+	 */
+	remove_spintable_memreserve(dtb);
 	if (fdt_add_reserved_memory(dtb, "atf@0", 0, 0x80000))
 		WARN("Failed to add reserved memory nodes to DT.\n");
 
@@ -262,7 +288,7 @@ static void rpi4_prepare_dtb(void)
 	if (ret < 0)
 		ERROR("Failed to pack Device Tree at %p: error %d\n", dtb, ret);
 
-	clean_dcache_range((uintptr_t)dtb, dtb_size(dtb));
+	clean_dcache_range((uintptr_t)dtb, fdt_blob_size(dtb));
 	INFO("Changed device tree to advertise PSCI.\n");
 }
 

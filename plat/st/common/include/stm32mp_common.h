@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2019, STMicroelectronics - All Rights Reserved
+ * Copyright (C) 2018-2021, STMicroelectronics - All Rights Reserved
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -11,9 +11,13 @@
 
 #include <platform_def.h>
 
+#define JEDEC_ST_BKID U(0x0)
+#define JEDEC_ST_MFID U(0x20)
+
 /* Functions to save and get boot context address given by ROM code */
 void stm32mp_save_boot_ctx_address(uintptr_t address);
 uintptr_t stm32mp_get_boot_ctx_address(void);
+uint16_t stm32mp_get_boot_itf_selected(void);
 
 bool stm32mp_is_single_core(void);
 bool stm32mp_is_closed_device(void);
@@ -61,6 +65,18 @@ uintptr_t stm32_get_gpio_bank_base(unsigned int bank);
 unsigned long stm32_get_gpio_bank_clock(unsigned int bank);
 uint32_t stm32_get_gpio_bank_offset(unsigned int bank);
 
+/* Return node offset for target GPIO bank ID @bank or a FDT error code */
+int stm32_get_gpio_bank_pinctrl_node(void *fdt, unsigned int bank);
+
+/* Get the chip revision */
+uint32_t stm32mp_get_chip_version(void);
+/* Get the chip device ID */
+uint32_t stm32mp_get_chip_dev_id(void);
+
+/* Get SOC name */
+#define STM32_SOC_NAME_SIZE 20
+void stm32mp_get_soc_name(char name[STM32_SOC_NAME_SIZE]);
+
 /* Print CPU information */
 void stm32mp_print_cpuinfo(void);
 
@@ -79,6 +95,7 @@ unsigned long stm32mp_clk_get_rate(unsigned long id);
 /* Initialise the IO layer and register platform IO devices */
 void stm32mp_io_setup(void);
 
+#if STM32MP_USE_STM32IMAGE
 /*
  * Check that the STM32 header of a .stm32 binary image is valid
  * @param header: pointer to the stm32 image header
@@ -86,5 +103,10 @@ void stm32mp_io_setup(void);
  * @return: 0 on success, negative value in case of error
  */
 int stm32mp_check_header(boot_api_image_header_t *header, uintptr_t buffer);
+#endif /* STM32MP_USE_STM32IMAGE */
+
+/* Functions to map DDR in MMU with non-cacheable attribute, and unmap it */
+int stm32mp_map_ddr_non_cacheable(void);
+int stm32mp_unmap_ddr(void);
 
 #endif /* STM32MP_COMMON_H */

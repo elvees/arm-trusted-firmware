@@ -23,8 +23,6 @@ Some modifications are common to all Boot Loader (BL) stages. Section 2
 discusses these in detail. The subsequent sections discuss the remaining
 modifications for each BL stage in detail.
 
-This document should be read in conjunction with the TF-A :ref:`User Guide`.
-
 Please refer to the :ref:`Platform Compatibility Policy` for the policy
 regarding compatibility and deprecation of these porting interfaces.
 
@@ -118,7 +116,7 @@ likely to be suitable for all platform ports.
    by ``plat/common/aarch64/platform_mp_stack.S`` and
    ``plat/common/aarch64/platform_up_stack.S``.
 
--  **define : CACHE_WRITEBACK_GRANULE**
+-  **#define : CACHE_WRITEBACK_GRANULE**
 
    Defines the size in bits of the largest cache line across all the cache
    levels in the platform.
@@ -564,22 +562,6 @@ behaviour of the ``assert()`` function (for example, to save memory).
    doesn't print anything to the console. If ``PLAT_LOG_LEVEL_ASSERT`` isn't
    defined, it defaults to ``LOG_LEVEL``.
 
-If the platform port uses the Activity Monitor Unit, the following constants
-may be defined:
-
--  **PLAT_AMU_GROUP1_COUNTERS_MASK**
-   This mask reflects the set of group counters that should be enabled.  The
-   maximum number of group 1 counters supported by AMUv1 is 16 so the mask
-   can be at most 0xffff. If the platform does not define this mask, no group 1
-   counters are enabled. If the platform defines this mask, the following
-   constant needs to also be defined.
-
--  **PLAT_AMU_GROUP1_NR_COUNTERS**
-   This value is used to allocate an array to save and restore the counters
-   specified by ``PLAT_AMU_GROUP1_COUNTERS_MASK`` on CPU suspend.
-   This value should be equal to the highest bit position set in the
-   mask, plus 1.  The maximum number of group 1 counters in AMUv1 is 16.
-
 File : plat_macros.S [mandatory]
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -874,6 +856,82 @@ twice.
 
 On success the function should return 0 and a negative error code otherwise.
 
+Function : plat_get_enc_key_info() [when FW_ENC_STATUS == 0 or 1]
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+::
+
+    Arguments : enum fw_enc_status_t fw_enc_status, uint8_t *key,
+                size_t *key_len, unsigned int *flags, const uint8_t *img_id,
+                size_t img_id_len
+    Return    : int
+
+This function provides a symmetric key (either SSK or BSSK depending on
+fw_enc_status) which is invoked during runtime decryption of encrypted
+firmware images. `plat/common/plat_bl_common.c` provides a dummy weak
+implementation for testing purposes which must be overridden by the platform
+trying to implement a real world firmware encryption use-case.
+
+It also allows the platform to pass symmetric key identifier rather than
+actual symmetric key which is useful in cases where the crypto backend provides
+secure storage for the symmetric key. So in this case ``ENC_KEY_IS_IDENTIFIER``
+flag must be set in ``flags``.
+
+In addition to above a platform may also choose to provide an image specific
+symmetric key/identifier using img_id.
+
+On success the function should return 0 and a negative error code otherwise.
+
+Note that this API depends on ``DECRYPTION_SUPPORT`` build flag.
+
+Function : plat_fwu_set_images_source() [when PSA_FWU_SUPPORT == 1]
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+::
+
+    Argument : struct fwu_metadata *metadata
+    Return   : void
+
+This function is mandatory when PSA_FWU_SUPPORT is enabled.
+It provides a means to retrieve image specification (offset in
+non-volatile storage and length) of active/updated images using the passed
+FWU metadata, and update I/O policies of active/updated images using retrieved
+image specification information.
+Further I/O layer operations such as I/O open, I/O read, etc. on these
+images rely on this function call.
+
+In Arm platforms, this function is used to set an I/O policy of the FIP image,
+container of all active/updated secure and non-secure images.
+
+Function : plat_fwu_set_metadata_image_source() [when PSA_FWU_SUPPORT == 1]
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+::
+
+    Argument : unsigned int image_id, uintptr_t *dev_handle,
+               uintptr_t *image_spec
+    Return   : int
+
+This function is mandatory when PSA_FWU_SUPPORT is enabled. It is
+responsible for setting up the platform I/O policy of the requested metadata
+image (either FWU_METADATA_IMAGE_ID or BKUP_FWU_METADATA_IMAGE_ID) that will
+be used to load this image from the platform's non-volatile storage.
+
+FWU metadata can not be always stored as a raw image in non-volatile storage
+to define its image specification (offset in non-volatile storage and length)
+statically in I/O policy.
+For example, the FWU metadata image is stored as a partition inside the GUID
+partition table image. Its specification is defined in the partition table
+that needs to be parsed dynamically.
+This function provides a means to retrieve such dynamic information to set
+the I/O policy of the FWU metadata image.
+Further I/O layer operations such as I/O open, I/O read, etc. on FWU metadata
+image relies on this function call.
+
+It returns '0' on success, otherwise a negative error value on error.
+Alongside, returns device handle and image specification from the I/O policy
+of the requested FWU metadata image.
+
 Common optional modifications
 -----------------------------
 
@@ -1088,6 +1146,67 @@ correspond to one of the standard log levels defined in debug.h. The platform
 can override the common implementation to define a different prefix string for
 the log output. The implementation should be robust to future changes that
 increase the number of log levels.
+
+Function : plat_get_soc_version()
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+::
+
+    Argument : void
+    Return   : int32_t
+
+This function returns soc version which mainly consist of below fields
+
+::
+
+    soc_version[30:24] = JEP-106 continuation code for the SiP
+    soc_version[23:16] = JEP-106 identification code with parity bit for the SiP
+    soc_version[15:0]  = Implementation defined SoC ID
+
+Function : plat_get_soc_revision()
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+::
+
+    Argument : void
+    Return   : int32_t
+
+This function returns soc revision in below format
+
+::
+
+    soc_revision[0:30] = SOC revision of specific SOC
+
+Function : plat_is_smccc_feature_available()
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+::
+
+    Argument : u_register_t
+    Return   : int32_t
+
+This function returns SMC_ARCH_CALL_SUCCESS if the platform supports
+the SMCCC function specified in the argument; otherwise returns
+SMC_ARCH_CALL_NOT_SUPPORTED.
+
+Function : plat_mboot_measure_image()
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+::
+
+    Argument : unsigned int, image_info_t *
+    Return   : void
+
+When the MEASURED_BOOT flag is enabled:
+
+-  This function measures the given image and records its measurement using
+   the measured boot backend driver.
+-  On the Arm FVP port, this function measures the given image using its
+   passed id and information and then records that measurement in the
+   Event Log buffer.
+-  This function must return 0 on success, a negative error code otherwise.
+
+When the MEASURED_BOOT flag is disabled, this function doesn't do anything.
 
 Modifications specific to a Boot Loader stage
 ---------------------------------------------
@@ -1340,6 +1459,42 @@ This function must return 0 on success, a non-null error code otherwise.
 The default implementation of this function asserts therefore platforms must
 override it when using the FWU feature.
 
+Function : bl1_plat_mboot_init() [optional]
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+::
+
+    Argument : void
+    Return   : void
+
+When the MEASURED_BOOT flag is enabled:
+
+-  This function is used to initialize the backend driver(s) of measured boot.
+-  On the Arm FVP port, this function is used to initialize the Event Log
+   backend driver, and also to write header information in the Event Log buffer.
+
+When the MEASURED_BOOT flag is disabled, this function doesn't do anything.
+
+Function : bl1_plat_mboot_finish() [optional]
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+::
+
+    Argument : void
+    Return   : void
+
+When the MEASURED_BOOT flag is enabled:
+
+-  This function is used to finalize the measured boot backend driver(s),
+   and also, set the information for the next bootloader component to
+   extend the measurement if needed.
+-  On the Arm FVP port, this function is used to pass the base address of
+   the Event Log buffer and its size to BL2 via tb_fw_config to extend the
+   Event Log buffer with the measurement of various images loaded by BL2.
+   It results in panic on error.
+
+When the MEASURED_BOOT flag is disabled, this function doesn't do anything.
+
 Boot Loader Stage 2 (BL2)
 -------------------------
 
@@ -1368,7 +1523,7 @@ are platform specific.
 
 On Arm standard platforms, the arguments received are :
 
-    arg0 - Points to load address of HW_CONFIG if present
+    arg0 - Points to load address of FW_CONFIG
 
     arg1 - ``meminfo`` structure populated by BL1. The platform copies
     the contents of ``meminfo`` as it may be subsequently overwritten by BL2.
@@ -1628,6 +1783,42 @@ Application Processor (AP) for BL2U execution to continue.
 This function returns 0 on success, a negative error code otherwise.
 This function is included if SCP_BL2U_BASE is defined.
 
+Function : bl2_plat_mboot_init() [optional]
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+::
+
+    Argument : void
+    Return   : void
+
+When the MEASURED_BOOT flag is enabled:
+
+-  This function is used to initialize the backend driver(s) of measured boot.
+-  On the Arm FVP port, this function is used to initialize the Event Log
+   backend driver with the Event Log buffer information (base address and
+   size) received from BL1. It results in panic on error.
+
+When the MEASURED_BOOT flag is disabled, this function doesn't do anything.
+
+Function : bl2_plat_mboot_finish() [optional]
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+::
+
+    Argument : void
+    Return   : void
+
+When the MEASURED_BOOT flag is enabled:
+
+-  This function is used to finalize the measured boot backend driver(s),
+   and also, set the information for the next bootloader component to extend
+   the measurement if needed.
+-  On the Arm FVP port, this function is used to pass the Event Log buffer
+   information (base address and size) to non-secure(BL33) and trusted OS(BL32)
+   via nt_fw and tos_fw config respectively. It results in panic on error.
+
+When the MEASURED_BOOT flag is disabled, this function doesn't do anything.
+
 Boot Loader Stage 3-1 (BL31)
 ----------------------------
 
@@ -1680,6 +1871,10 @@ In Arm standard platforms, the arguments received are :
     which is list of executable images following BL31,
 
     arg1 - Points to load address of SOC_FW_CONFIG if present
+           except in case of Arm FVP and Juno platform.
+
+           In case of Arm FVP and Juno platform, points to load address
+           of FW_CONFIG.
 
     arg2 - Points to load address of HW_CONFIG if present
 
@@ -1834,6 +2029,21 @@ frequency for the CPU's generic timer. This value will be programmed into the
 of the system counter, which is retrieved from the first entry in the frequency
 modes table.
 
+Function : plat_arm_set_twedel_scr_el3() [optional]
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+::
+
+    Argument : void
+    Return   : uint32_t
+
+This function is used in v8.6+ systems to set the WFE trap delay value in
+SCR_EL3. If this function returns TWED_DISABLED or is left unimplemented, this
+feature is not enabled.  The only hook provided is to set the TWED fields in
+SCR_EL3, there are similar fields in HCR_EL2, SCTLR_EL2, and SCTLR_EL1 to adjust
+the WFE trap delays in lower ELs and these fields should be set by the
+appropriate EL2 or EL1 code depending on the platform configuration.
+
 #define : PLAT_PERCPU_BAKERY_LOCK_SIZE [optional]
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -1885,23 +2095,27 @@ be higher than Normal |SDEI| priority.
 Functions
 .........
 
-Function: int plat_sdei_validate_entry_point(uintptr_t ep) [optional]
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Function: int plat_sdei_validate_entry_point() [optional]
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 ::
 
-  Argument: uintptr_t
+  Argument: uintptr_t ep, unsigned int client_mode
   Return: int
 
-This function validates the address of client entry points provided for both
-event registration and *Complete and Resume* |SDEI| calls. The function
-takes one argument, which is the address of the handler the |SDEI| client
-requested to register. The function must return ``0`` for successful validation,
-or ``-1`` upon failure.
+This function validates the entry point address of the event handler provided by
+the client for both event registration and *Complete and Resume* |SDEI| calls.
+The function ensures that the address is valid in the client translation regime.
+
+The second argument is the exception level that the client is executing in. It
+can be Non-Secure EL1 or Non-Secure EL2.
+
+The function must return ``0`` for successful validation, or ``-1`` upon failure.
 
 The default implementation always returns ``0``. On Arm platforms, this function
-is implemented to translate the entry point to physical address, and further to
-ensure that the address is located in Non-secure DRAM.
+translates the entry point address within the client translation regime and
+further ensures that the resulting physical address is located in Non-secure
+DRAM.
 
 Function: void plat_sdei_handle_masked_trigger(uint64_t mpidr, unsigned int intr) [optional]
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1923,6 +2137,53 @@ events are masked on the PE, the dispatcher implementation invokes the function
 interrupt and the interrupt ID are passed as parameters.
 
 The default implementation only prints out a warning message.
+
+.. _porting_guide_trng_requirements:
+
+TRNG porting requirements
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The |TRNG| backend requires the platform to provide the following values
+and mandatory functions.
+
+Values
+......
+
+value: uuid_t plat_trng_uuid [mandatory]
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This value must be defined to the UUID of the TRNG backend that is specific to
+the hardware after ``plat_trng_setup`` function is called. This value must
+conform to the SMCCC calling convention; The most significant 32 bits of the
+UUID must not equal ``0xffffffff`` or the signed integer ``-1`` as this value in
+w0 indicates failure to get a TRNG source.
+
+Functions
+.........
+
+Function: void plat_entropy_setup(void) [mandatory]
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+::
+
+  Argument: none
+  Return: none
+
+This function is expected to do platform-specific initialization of any TRNG
+hardware. This may include generating a UUID from a hardware-specific seed.
+
+Function: bool plat_get_entropy(uint64_t \*out) [mandatory]
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+::
+
+  Argument: uint64_t *
+  Return: bool
+  Out : when the return value is true, the entropy has been written into the
+  storage pointed to
+
+This function writes entropy into storage provided by the caller. If no entropy
+is available, it must return false and the storage must not be written.
 
 Power State Coordination Interface (in BL31)
 --------------------------------------------
@@ -2001,7 +2262,7 @@ Function : plat_psci_stat_get_residency() [optional]
 
 ::
 
-    Argument : unsigned int, const psci_power_state_t *, int
+    Argument : unsigned int, const psci_power_state_t *, unsigned int
     Return   : u_register_t
 
 This is an optional interface that is is invoked after resuming from a low power
@@ -2387,12 +2648,10 @@ present in the platform. Arm standard platform layer supports both
 `Arm Generic Interrupt Controller version 2.0 (GICv2)`_
 and `3.0 (GICv3)`_. Juno builds the Arm platform layer to use GICv2 and the
 FVP can be configured to use either GICv2 or GICv3 depending on the build flag
-``FVP_USE_GIC_DRIVER`` (See FVP platform specific build options in
-:ref:`User Guide` for more details).
+``FVP_USE_GIC_DRIVER`` (See :ref:`build_options_arm_fvp_platform` for more
+details).
 
-See also: `Interrupt Controller Abstraction APIs`__.
-
-.. __: ../design/platform-interrupt-controller-API.rst
+See also: :ref:`Interrupt Controller Abstraction APIs<Platform Interrupt Controller API>`.
 
 Function : plat_interrupt_type_to_line() [mandatory]
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -2517,9 +2776,7 @@ This API is used by the CPU to indicate to the platform IC that processing of
 the highest pending interrupt has begun. It should return the raw, unmodified
 value obtained from the interrupt controller when acknowledging an interrupt.
 The actual interrupt number shall be extracted from this raw value using the API
-`plat_ic_get_interrupt_id()`__.
-
-.. __: ../design/platform-interrupt-controller-API.rst#function-unsigned-int-plat-ic-get-interrupt-id-unsigned-int-raw-optional
+`plat_ic_get_interrupt_id()<plat_ic_get_interrupt_id>`.
 
 This function in Arm standard platforms using GICv2, reads the *Interrupt
 Acknowledge Register* (``GICC_IAR``). This changes the state of the highest
@@ -2643,12 +2900,13 @@ Function : plat_crash_console_flush [mandatory]
 ::
 
     Argument : void
-    Return   : int
+    Return   : void
 
 This API is used by the crash reporting mechanism to force write of all buffered
 data on the designated crash console. It should only use general purpose
-registers x0 through x5 to do its work. The return value is 0 on successful
-completion; otherwise the return value is -1.
+registers x0 through x5 to do its work.
+
+.. _External Abort handling and RAS Support:
 
 External Abort handling and RAS Support
 ---------------------------------------
@@ -2765,6 +3023,19 @@ build system.
    to ``no``. If any of the options ``EL3_PAYLOAD_BASE`` or ``PRELOADED_BL33_BASE``
    are used, this flag will be set to ``no`` automatically.
 
+Platform include paths
+----------------------
+
+Platforms are allowed to add more include paths to be passed to the compiler.
+The ``PLAT_INCLUDES`` variable is used for this purpose. This is needed in
+particular for the file ``platform_def.h``.
+
+Example:
+
+.. code:: c
+
+  PLAT_INCLUDES  += -Iinclude/plat/myplat/include
+
 C Library
 ---------
 
@@ -2796,10 +3067,10 @@ storage access is only required by BL1 and BL2 phases and performed inside the
 
 It is mandatory to implement at least one storage driver. For the Arm
 development platforms the Firmware Image Package (FIP) driver is provided as
-the default means to load data from storage (see the "Firmware Image Package"
-section in the :ref:`User Guide`). The storage layer is described in the header file
-``include/drivers/io/io_storage.h``. The implementation of the common library
-is in ``drivers/io/io_storage.c`` and the driver files are located in
+the default means to load data from storage (see :ref:`firmware_design_fip`).
+The storage layer is described in the header file
+``include/drivers/io/io_storage.h``. The implementation of the common library is
+in ``drivers/io/io_storage.c`` and the driver files are located in
 ``drivers/io/``.
 
 .. uml:: ../resources/diagrams/plantuml/io_arm_class_diagram.puml
@@ -2846,7 +3117,7 @@ amount of open resources per driver.
 
 --------------
 
-*Copyright (c) 2013-2019, Arm Limited and Contributors. All rights reserved.*
+*Copyright (c) 2013-2021, Arm Limited and Contributors. All rights reserved.*
 
 .. _PSCI: http://infocenter.arm.com/help/topic/com.arm.doc.den0022c/DEN0022C_Power_State_Coordination_Interface.pdf
 .. _Arm Generic Interrupt Controller version 2.0 (GICv2): http://infocenter.arm.com/help/topic/com.arm.doc.ihi0048b/index.html

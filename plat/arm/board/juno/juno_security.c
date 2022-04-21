@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2019, ARM Limited and Contributors. All rights reserved.
+ * Copyright (c) 2014-2021, ARM Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -115,6 +115,14 @@ static void init_debug_cfg(void)
 	/* Drive SPIDEN LOW to disable invasive debug of secure state. */
 	mmio_write_32(SSC_REG_BASE + SSC_DBGCFG_CLR,
 		1U << SPIDEN_INT_CLR_SHIFT);
+
+	/* Set internal drive selection for SPNIDEN. */
+	mmio_write_32(SSC_REG_BASE + SSC_DBGCFG_SET,
+		1U << SPNIDEN_SEL_SET_SHIFT);
+
+	/* Drive SPNIDEN LOW to disable non-invasive debug of secure state. */
+	mmio_write_32(SSC_REG_BASE + SSC_DBGCFG_CLR,
+		1U << SPNIDEN_INT_CLR_SHIFT);
 #endif
 }
 
@@ -127,13 +135,13 @@ void plat_arm_security_setup(void)
 	init_debug_cfg();
 	/* Initialize the TrustZone Controller */
 #ifdef JUNO_TZMP1
-	arm_tzc400_setup(juno_tzmp1_tzc_regions);
+	arm_tzc400_setup(PLAT_ARM_TZC_BASE, juno_tzmp1_tzc_regions);
 	INFO("TZC protected shared memory base address for TZMP usecase: %p\n",
 	     (void *)JUNO_AP_TZC_SHARE_DRAM1_BASE);
 	INFO("TZC protected shared memory end address for TZMP usecase: %p\n",
 	     (void *)JUNO_AP_TZC_SHARE_DRAM1_END);
 #else
-	arm_tzc400_setup(NULL);
+	arm_tzc400_setup(PLAT_ARM_TZC_BASE, NULL);
 #endif
 	/* Do ARM CSS internal NIC setup */
 	css_init_nic400();

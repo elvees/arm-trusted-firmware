@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Arm Limited. All rights reserved.
+ * Copyright (c) 2019-2021, Arm Limited. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -9,8 +9,8 @@
 #include <common/debug.h>
 #include <drivers/arm/sp805.h>
 #include <drivers/cfi/v2m_flash.h>
+#include <lib/mmio.h>
 #include <plat/arm/common/plat_arm.h>
-#include <plat/common/platform.h>
 #include <platform_def.h>
 
 /*
@@ -18,27 +18,10 @@
  */
 __dead2 void plat_arm_error_handler(int err)
 {
-	int ret;
+	/* Propagate the err code in the NV-flags register */
+	mmio_write_32(V2M_SYS_NVFLAGS_ADDR, (uint32_t)err);
 
-	switch (err) {
-	case -ENOENT:
-	case -EAUTH:
-		/* Image load or authentication error. Erase the ToC */
-		INFO("Erasing FIP ToC from flash...\n");
-		(void)nor_unlock(PLAT_ARM_FIP_BASE);
-		ret = nor_word_program(PLAT_ARM_FIP_BASE, 0);
-		if (ret != 0) {
-			ERROR("Cannot erase ToC\n");
-		} else {
-			INFO("Done\n");
-		}
-		break;
-	default:
-		/* Unexpected error */
-		break;
-	}
-
-	(void)console_flush();
+	console_flush();
 
 	/* Setup the watchdog to reset the system as soon as possible */
 	sp805_refresh(ARM_SP805_TWDG_BASE, 1U);

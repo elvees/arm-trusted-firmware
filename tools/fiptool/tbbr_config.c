@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018, ARM Limited and Contributors. All rights reserved.
+ * Copyright (c) 2016-2021, ARM Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -67,7 +67,17 @@ toc_entry_t toc_entries[] = {
 		.uuid = UUID_NON_TRUSTED_FIRMWARE_BL33,
 		.cmdline_name = "nt-fw"
 	},
+	{
+		.name = "Realm Monitor Management Firmware",
+		.uuid = UUID_REALM_MONITOR_MGMT_FIRMWARE,
+		.cmdline_name = "rmm-fw"
+	},
 	/* Dynamic Configs */
+	{
+		.name = "FW_CONFIG",
+		.uuid = UUID_FW_CONFIG,
+		.cmdline_name = "fw-config"
+	},
 	{
 		.name = "HW_CONFIG",
 		.uuid = UUID_HW_CONFIG,
@@ -150,6 +160,16 @@ toc_entry_t toc_entries[] = {
 		.name = "Non-Trusted Firmware content certificate",
 		.uuid = UUID_NON_TRUSTED_FW_CONTENT_CERT,
 		.cmdline_name = "nt-fw-cert"
+	},
+	{
+		.name = "SiP owned Secure Partition content certificate",
+		.uuid = UUID_SIP_SECURE_PARTITION_CONTENT_CERT,
+		.cmdline_name = "sip-sp-cert"
+	},
+	{
+		.name = "Platform owned Secure Partition content certificate",
+		.uuid = UUID_PLAT_SECURE_PARTITION_CONTENT_CERT,
+		.cmdline_name = "plat-sp-cert"
 	},
 	{
 		.name = NULL,

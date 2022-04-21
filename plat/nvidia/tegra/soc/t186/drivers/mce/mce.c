@@ -1,11 +1,14 @@
 /*
  * Copyright (c) 2015-2018, ARM Limited and Contributors. All rights reserved.
+ * Copyright (c) 2020, NVIDIA Corporation. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
 #include <assert.h>
 #include <errno.h>
+#include <inttypes.h>
+#include <stdint.h>
 #include <string.h>
 
 #include <arch.h>
@@ -340,7 +343,7 @@ int32_t mce_command_handler(uint64_t cmd, uint64_t arg0, uint64_t arg1,
 		break;
 
 	default:
-		ERROR("unknown MCE command (%llu)\n", cmd);
+		ERROR("unknown MCE command (%" PRIu64 ")\n", cmd);
 		ret = EINVAL;
 		break;
 	}
@@ -383,14 +386,6 @@ int32_t mce_update_gsc_videomem(void)
 int32_t mce_update_gsc_tzdram(void)
 {
 	return mce_update_ccplex_gsc(TEGRA_ARI_GSC_TZ_DRAM_IDX);
-}
-
-/*******************************************************************************
- * Handler to update carveout values for TZ SysRAM aperture
- ******************************************************************************/
-int32_t mce_update_gsc_tzram(void)
-{
-	return mce_update_ccplex_gsc(TEGRA_ARI_GSC_TZRAM);
 }
 
 /*******************************************************************************

@@ -95,12 +95,15 @@ struct ti_sci_msg_resp_version {
 /**
  * struct ti_sci_msg_req_reboot - Reboot the SoC
  * @hdr:	Generic Header
+ * @domain:	Domain to be reset, 0 for full SoC reboot
  *
  * Request type is TI_SCI_MSG_SYS_RESET, responded with a generic
  * ACK/NACK message.
  */
 struct ti_sci_msg_req_reboot {
 	struct ti_sci_msg_hdr hdr;
+#define TI_SCI_DOMAIN_FULL_SOC_RESET	0x0
+	uint8_t domain;
 } __packed;
 
 /**
@@ -563,8 +566,13 @@ struct ti_sci_msg_req_set_proc_boot_config {
 	uint32_t config_flags_clear;
 } __packed;
 
+/* ARMV8 Control Flags */
+#define PROC_BOOT_CTRL_FLAG_ARMV8_ACINACTM      0x00000001
+#define PROC_BOOT_CTRL_FLAG_ARMV8_AINACTS       0x00000002
+#define PROC_BOOT_CTRL_FLAG_ARMV8_L2FLUSHREQ    0x00000100
+
 /* R5 Control Flags */
-#define PROC_BOOT_CTRL_FLAG_R5_CORE_HALT                0x00000001
+#define PROC_BOOT_CTRL_FLAG_R5_CORE_HALT        0x00000001
 
 /**
  * struct ti_sci_msg_req_set_proc_boot_ctrl - Set Processor boot control flags
@@ -618,6 +626,8 @@ struct ti_sci_msg_req_get_proc_boot_status {
 /* ARMv8 Status Flags */
 #define PROC_BOOT_STATUS_FLAG_ARMV8_WFE			0x00000001
 #define PROC_BOOT_STATUS_FLAG_ARMV8_WFI			0x00000002
+#define PROC_BOOT_STATUS_FLAG_ARMV8_L2F_DONE		0x00000010
+#define PROC_BOOT_STATUS_FLAG_ARMV8_STANDBYWFIL2	0x00000020
 
 /* R5 Status Flags */
 #define PROC_BOOT_STATUS_FLAG_R5_WFE			0x00000001

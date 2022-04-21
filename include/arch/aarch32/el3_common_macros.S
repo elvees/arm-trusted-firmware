@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2019, ARM Limited and Contributors. All rights reserved.
+ * Copyright (c) 2016-2021, ARM Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -10,6 +10,9 @@
 #include <arch.h>
 #include <asm_macros.S>
 #include <assert_macros.S>
+#include <lib/xlat_tables/xlat_tables_defs.h>
+
+#define PAGE_START_MASK		~(PAGE_SIZE_MASK)
 
 	/*
 	 * Helper macro to initialise EL3 registers we care about.
@@ -60,11 +63,23 @@
 	 *  cp11 field is ignored, but is set to same value as cp10. The cp10
 	 *  field is set to allow access to Advanced SIMD and floating point
 	 *  features from both Security states.
+	 *
+	 * NSACR.NSTRCDIS: When system register trace implemented, Set to one
+	 *  so that NS System register accesses to all implemented trace
+	 *  registers are disabled.
+	 *  When system register trace is not implemented, this bit is RES0 and
+	 *  hence set to zero.
 	 * ---------------------------------------------------------------------
 	 */
 	ldcopr	r0, NSACR
 	and	r0, r0, #NSACR_IMP_DEF_MASK
 	orr	r0, r0, #(NSACR_RESET_VAL | NSACR_ENABLE_FP_ACCESS)
+	ldcopr	r1, ID_DFR0
+	ubfx	r1, r1, #ID_DFR0_COPTRC_SHIFT, #ID_DFR0_COPTRC_LENGTH
+	cmp	r1, #ID_DFR0_COPTRC_SUPPORTED
+	bne	1f
+	orr	r0, r0, #NSTRCDIS_BIT
+1:
 	stcopr	r0, NSACR
 	isb
 
@@ -116,9 +131,22 @@
 	 *  in Secure state. This bit is RES0 in versions of the architecture
 	 *  earlier than ARMv8.5, setting it to 1 doesn't have any effect on
 	 *  them.
+	 *
+	 * SDCR.TTRF: Set to one so that access to trace filter control
+	 *  registers in non-monitor mode generate Monitor trap exception,
+	 *  unless the access generates a higher priority exception when
+	 *  trace filter control(FEAT_TRF) is implemented.
+	 *  When FEAT_TRF is not implemented, this bit is RES0.
 	 * ---------------------------------------------------------------------
 	 */
-	ldr	r0, =(SDCR_RESET_VAL | SDCR_SPD(SDCR_SPD_DISABLE) | SDCR_SCCD_BIT)
+	ldr	r0, =((SDCR_RESET_VAL | SDCR_SPD(SDCR_SPD_DISABLE) | \
+		      SDCR_SCCD_BIT) & ~SDCR_TTRF_BIT)
+	ldcopr	r1, ID_DFR0
+	ubfx	r1, r1, #ID_DFR0_TRACEFILT_SHIFT, #ID_DFR0_TRACEFILT_LENGTH
+	cmp	r1, #ID_DFR0_TRACEFILT_SUPPORTED
+	bne	1f
+	orr	r0, r0, #SDCR_TTRF_BIT
+1:
 	stcopr	r0, SDCR
 
 	/* ---------------------------------------------------------------------
@@ -199,11 +227,18 @@
  *
  * _exception_vectors:
  *	Address of the exception vectors to program in the VBAR_EL3 register.
+ *
+ * _pie_fixup_size:
+ *	Size of memory region to fixup Global Descriptor Table (GDT).
+ *
+ *	A non-zero value is expected when firmware needs GDT to be fixed-up.
+ *
  * -----------------------------------------------------------------------------
  */
 	.macro el3_entrypoint_common					\
 		_init_sctlr, _warm_boot_mailbox, _secondary_cold_boot,	\
-		_init_memory, _init_c_runtime, _exception_vectors
+		_init_memory, _init_c_runtime, _exception_vectors,	\
+		_pie_fixup_size
 
 	/* Make sure we are in Secure Mode */
 #if ENABLE_ASSERTIONS
@@ -242,6 +277,10 @@
 	cps	#MODE32_mon
 	isb
 
+#if DISABLE_MTPMU
+	bl	mtpmu_disable
+#endif
+
 	.if \_warm_boot_mailbox
 		/* -------------------------------------------------------------
 		 * This code will be executed for both warm and cold resets.
@@ -254,6 +293,27 @@
 		cmp	r0, #0
 		bxne	r0
 	.endif /* _warm_boot_mailbox */
+
+	.if \_pie_fixup_size
+#if ENABLE_PIE
+		/*
+		 * ------------------------------------------------------------
+		 * If PIE is enabled fixup the Global descriptor Table only
+		 * once during primary core cold boot path.
+		 *
+		 * Compile time base address, required for fixup, is calculated
+		 * using "pie_fixup" label present within first page.
+		 * ------------------------------------------------------------
+		 */
+	pie_fixup:
+		ldr	r0, =pie_fixup
+		ldr	r1, =PAGE_START_MASK
+		and	r0, r0, r1
+		mov_imm	r1, \_pie_fixup_size
+		add	r1, r1, r0
+		bl	fixup_gdt_reloc
+#endif /* ENABLE_PIE */
+	.endif /* _pie_fixup_size */
 
 	/* ---------------------------------------------------------------------
 	 * Set the exception vectors (VBAR/MVBAR).
@@ -320,24 +380,45 @@
 		 * includes the data and NOBITS sections. This is done to
 		 * safeguard against possible corruption of this memory by
 		 * dirty cache lines in a system cache as a result of use by
-		 * an earlier boot loader stage.
+		 * an earlier boot loader stage. If PIE is enabled however,
+		 * RO sections including the GOT may be modified during
+		 * pie fixup. Therefore, to be on the safe side, invalidate
+		 * the entire image region if PIE is enabled.
 		 * -----------------------------------------------------------------
 		 */
+#if ENABLE_PIE
+#if SEPARATE_CODE_AND_RODATA
+		ldr	r0, =__TEXT_START__
+#else
+		ldr	r0, =__RO_START__
+#endif /* SEPARATE_CODE_AND_RODATA */
+#else
 		ldr	r0, =__RW_START__
+#endif /* ENABLE_PIE */
 		ldr	r1, =__RW_END__
 		sub	r1, r1, r0
 		bl	inv_dcache_range
 #endif
 
+		/*
+		 * zeromem uses r12 whereas it is used to save previous BL arg3,
+		 * save it in r7
+		 */
+		mov	r7, r12
 		ldr	r0, =__BSS_START__
-		ldr	r1, =__BSS_SIZE__
+		ldr	r1, =__BSS_END__
+		sub 	r1, r1, r0
 		bl	zeromem
 
 #if USE_COHERENT_MEM
 		ldr	r0, =__COHERENT_RAM_START__
-		ldr	r1, =__COHERENT_RAM_UNALIGNED_SIZE__
+		ldr	r1, =__COHERENT_RAM_END_UNALIGNED__
+		sub 	r1, r1, r0
 		bl	zeromem
 #endif
+
+		/* Restore r12 */
+		mov	r12, r7
 
 #if defined(IMAGE_BL1) || (defined(IMAGE_BL2) && BL2_AT_EL3 && BL2_IN_XIP_MEM)
 		/* -----------------------------------------------------
@@ -346,7 +427,8 @@
 		 */
 		ldr	r0, =__DATA_RAM_START__
 		ldr	r1, =__DATA_ROM_START__
-		ldr	r2, =__DATA_SIZE__
+		ldr	r2, =__DATA_RAM_END__
+		sub 	r2, r2, r0
 		bl	memcpy4
 #endif
 	.endif /* _init_c_runtime */

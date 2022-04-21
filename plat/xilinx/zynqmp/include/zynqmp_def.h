@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2018, ARM Limited and Contributors. All rights reserved.
+ * Copyright (c) 2014-2020, ARM Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -7,6 +7,7 @@
 #ifndef ZYNQMP_DEF_H
 #define ZYNQMP_DEF_H
 
+#include <plat/arm/common/smccc_def.h>
 #include <plat/common/common_def.h>
 
 #define ZYNQMP_CONSOLE_ID_cadence	1
@@ -15,6 +16,9 @@
 #define ZYNQMP_CONSOLE_ID_dcc		3
 
 #define ZYNQMP_CONSOLE_IS(con)	(ZYNQMP_CONSOLE_ID_ ## con == ZYNQMP_CONSOLE)
+
+/* Default counter frequency */
+#define ZYNQMP_DEFAULT_COUNTER_FREQ	0U
 
 /* Firmware Image Package */
 #define ZYNQMP_PRIMARY_CPU		0
@@ -330,6 +334,7 @@
 #define IOU_SLCR_GEM_CLK_CTRL		(IOU_SLCR_BASEADDR + 0x308)
 #define IOU_SLCR_CAN_MIO_CTRL		(IOU_SLCR_BASEADDR + 0x304)
 #define FPD_SLCR_WDT_CLK_SEL		(FPD_SLCR_BASEADDR + 0x100)
+#define IOU_SLCR_WDT_CLK_SEL		(IOU_SLCR_BASEADDR + 0x300)
 
 /* Global general storage register base address */
 #define GGS_BASEADDR		(0xFFD80030U)
@@ -339,12 +344,22 @@
 #define PGGS_BASEADDR		(0xFFD80050U)
 #define PGGS_NUM_REGS		U(4)
 
-/* Warm restart boot health status register and mask */
-#define PM_BOOT_HEALTH_STATUS_REG		(GGS_BASEADDR + U(0x10))
+/* PMU GGS4 register 4 is used for warm restart boot health status */
+#define PMU_GLOBAL_GEN_STORAGE4			(GGS_BASEADDR + 0x10)
+/* Warm restart boot health status mask */
 #define PM_BOOT_HEALTH_STATUS_MASK		U(0x01)
+/* WDT restart scope shift and mask */
+#define RESTART_SCOPE_SHIFT			(3)
+#define RESTART_SCOPE_MASK			(0x3U << RESTART_SCOPE_SHIFT)
 
 /*AFI registers */
 #define  AFIFM6_WRCTRL		U(13)
 #define  FABRIC_WIDTH		U(3)
+
+/* CSUDMA Module Base Address*/
+#define CSUDMA_BASE		0xFFC80000
+
+/* RSA-CORE Module Base Address*/
+#define RSA_CORE_BASE		0xFFCE0000
 
 #endif /* ZYNQMP_DEF_H */

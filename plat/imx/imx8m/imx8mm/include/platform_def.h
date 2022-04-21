@@ -1,8 +1,11 @@
 /*
- * Copyright (c) 2019, ARM Limited and Contributors. All rights reserved.
+ * Copyright (c) 2021, ARM Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
+
+#include <arch.h>
+#include <common/tbbr/tbbr_img_def.h>
 
 #define PLATFORM_LINKER_FORMAT		"elf64-littleaarch64"
 #define PLATFORM_LINKER_ARCH		aarch64
@@ -10,11 +13,11 @@
 #define PLATFORM_STACK_SIZE		0xB00
 #define CACHE_WRITEBACK_GRANULE		64
 
-#define PLAT_PRIMARY_CPU		0x0
-#define PLATFORM_MAX_CPU_PER_CLUSTER	4
-#define PLATFORM_CLUSTER_COUNT		1
-#define PLATFORM_CLUSTER0_CORE_COUNT	4
-#define PLATFORM_CLUSTER1_CORE_COUNT	0
+#define PLAT_PRIMARY_CPU		U(0x0)
+#define PLATFORM_MAX_CPU_PER_CLUSTER	U(4)
+#define PLATFORM_CLUSTER_COUNT		U(1)
+#define PLATFORM_CLUSTER0_CORE_COUNT	U(4)
+#define PLATFORM_CLUSTER1_CORE_COUNT	U(0)
 #define PLATFORM_CORE_COUNT		(PLATFORM_CLUSTER0_CORE_COUNT)
 
 #define IMX_PWR_LVL0			MPIDR_AFFLVL0
@@ -29,12 +32,32 @@
 #define PLAT_WAIT_RET_STATE		U(1)
 #define PLAT_STOP_OFF_STATE		U(3)
 
+#define PLAT_PRI_BITS			U(3)
+#define PLAT_SDEI_CRITICAL_PRI		0x10
+#define PLAT_SDEI_NORMAL_PRI		0x20
+#define PLAT_SDEI_SGI_PRIVATE		U(9)
+
+#if defined(NEED_BL2)
+#define BL2_BASE			U(0x920000)
+#define BL2_LIMIT			U(0x940000)
+#define BL31_BASE			U(0x900000)
+#define BL31_LIMIT			U(0x920000)
+#define IMX_FIP_BASE			U(0x40310000)
+#define IMX_FIP_SIZE			U(0x000300000)
+#define IMX_FIP_LIMIT			U(FIP_BASE + FIP_SIZE)
+
+/* Define FIP image location on eMMC */
+#define IMX_FIP_MMC_BASE		U(0x100000)
+
+#define PLAT_IMX8MM_BOOT_MMC_BASE	U(0x30B50000) /* SD */
+#else
 #define BL31_BASE			U(0x920000)
 #define BL31_LIMIT			U(0x940000)
-#define BL32_BASE			U(0xbe000000)
+#endif
 
 /* non-secure uboot base */
 #define PLAT_NS_IMAGE_OFFSET		U(0x40200000)
+#define PLAT_NS_IMAGE_SIZE		U(0x00200000)
 
 /* GICv3 base address */
 #define PLAT_GICD_BASE			U(0x38800000)
@@ -48,7 +71,6 @@
 
 #define HAB_RVT_BASE			U(0x00000900) /* HAB_RVT for i.MX8MM */
 
-#define IMX_BOOT_UART_BASE		U(0x30890000)
 #define IMX_BOOT_UART_CLK_IN_HZ		24000000 /* Select 24MHz oscillator */
 
 #define PLAT_CRASH_UART_BASE		IMX_BOOT_UART_BASE
@@ -103,6 +125,8 @@
 #define SRC_OTG1PHY_SCR			U(0x20)
 #define SRC_OTG2PHY_SCR			U(0x24)
 #define SRC_GPR1_OFFSET			U(0x74)
+#define SRC_GPR10_OFFSET		U(0x98)
+#define SRC_GPR10_PERSIST_SECONDARY_BOOT	BIT(30)
 
 #define SNVS_LPCR			U(0x38)
 #define SNVS_LPCR_SRTC_ENV		BIT(0)
@@ -124,3 +148,7 @@
 #define COUNTER_FREQUENCY		8000000 /* 8MHz */
 
 #define IMX_WDOG_B_RESET
+
+#define MAX_IO_HANDLES			3U
+#define MAX_IO_DEVICES			2U
+#define MAX_IO_BLOCK_DEVICES		1U

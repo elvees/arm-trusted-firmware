@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2019, ARM Limited and Contributors. All rights reserved.
+ * Copyright (c) 2013-2021, ARM Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -106,6 +106,11 @@ IMPORT_SYM(uintptr_t, __RODATA_END__,		BL_RO_DATA_END);
 IMPORT_SYM(uintptr_t, __RO_START__,		BL_CODE_BASE);
 IMPORT_SYM(uintptr_t, __RO_END__,		BL_CODE_END);
 #endif
+#if SEPARATE_NOBITS_REGION
+IMPORT_SYM(uintptr_t, __NOBITS_START__,		BL_NOBITS_BASE);
+IMPORT_SYM(uintptr_t, __NOBITS_END__,		BL_NOBITS_END);
+#endif
+IMPORT_SYM(uintptr_t, __RW_END__,		BL_END);
 
 #if defined(IMAGE_BL1)
 IMPORT_SYM(uintptr_t, __BL1_ROM_END__,		BL1_ROM_END);
@@ -121,6 +126,8 @@ IMPORT_SYM(uintptr_t, __BL31_START__,		BL31_START);
 IMPORT_SYM(uintptr_t, __BL31_END__,		BL31_END);
 #elif defined(IMAGE_BL32)
 IMPORT_SYM(uintptr_t, __BL32_END__,		BL32_END);
+#elif defined(IMAGE_RMM)
+IMPORT_SYM(uintptr_t, __RMM_END__,		RMM_END);
 #endif /* IMAGE_BLX */
 
 /* The following symbols are only exported from the BL2 at EL3 linker script. */

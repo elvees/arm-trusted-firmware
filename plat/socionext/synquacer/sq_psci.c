@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, ARM Limited and Contributors. All rights reserved.
+ * Copyright (c) 2018-2020, ARM Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -97,6 +97,14 @@ static void sq_power_down_common(const psci_power_state_t *target_state)
 void sq_pwr_domain_off(const psci_power_state_t *target_state)
 {
 #if SQ_USE_SCMI_DRIVER
+	/* Prevent interrupts from spuriously waking up this cpu */
+	sq_gic_cpuif_disable();
+
+	/* Cluster is to be turned off, so disable coherency */
+	if (SQ_CLUSTER_PWR_STATE(target_state) == SQ_LOCAL_STATE_OFF) {
+		plat_sq_interconnect_exit_coherency();
+	}
+
 	sq_scmi_off(target_state);
 #else
 	sq_power_down_common(target_state);
@@ -155,7 +163,7 @@ void __dead2 sq_system_reset(void)
 
 void sq_cpu_standby(plat_local_state_t cpu_state)
 {
-	unsigned int scr;
+	u_register_t scr;
 
 	assert(cpu_state == SQ_LOCAL_STATE_RET);
 

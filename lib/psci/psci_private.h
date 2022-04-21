@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2019, ARM Limited and Contributors. All rights reserved.
+ * Copyright (c) 2013-2020, ARM Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -41,6 +41,11 @@
 			define_psci_cap(PSCI_STAT_COUNT_AARCH64) |	\
 			define_psci_cap(PSCI_SYSTEM_RESET2_AARCH64) |	\
 			define_psci_cap(PSCI_MEM_CHK_RANGE_AARCH64))
+
+/* Internally PSCI uses a uint16_t for various cpu indexes so
+ * define a limit to number of CPUs that can be initialised.
+ */
+#define PSCI_MAX_CPUS_INDEX	0xFFFFU
 
 /*
  * Helper functions to get/set the fields of PSCI per-cpu data.
@@ -134,7 +139,7 @@ typedef struct non_cpu_pwr_domain_node {
 	unsigned char level;
 
 	/* For indexing the psci_lock array*/
-	unsigned char lock_index;
+	uint16_t lock_index;
 } non_cpu_pd_node_t;
 
 typedef struct cpu_pwr_domain_node {
@@ -239,7 +244,7 @@ static inline void psci_lock_release(non_cpu_pd_node_t *non_cpu_pd_node)
 #endif /* HW_ASSISTED_COHERENCY */
 
 static inline void psci_lock_init(non_cpu_pd_node_t *non_cpu_pd_node,
-				  unsigned char idx)
+				  uint16_t idx)
 {
 	non_cpu_pd_node[idx].lock_index = idx;
 }
@@ -251,6 +256,7 @@ extern const plat_psci_ops_t *psci_plat_pm_ops;
 extern non_cpu_pd_node_t psci_non_cpu_pd_nodes[PSCI_NUM_NON_CPU_PWR_DOMAINS];
 extern cpu_pd_node_t psci_cpu_pd_nodes[PLATFORM_CORE_COUNT];
 extern unsigned int psci_caps;
+extern unsigned int psci_plat_core_count;
 
 /*******************************************************************************
  * SPD's power management hooks registered with PSCI
@@ -300,7 +306,7 @@ void prepare_cpu_pwr_dwn(unsigned int power_level);
 int psci_cpu_on_start(u_register_t target_cpu,
 		      const entry_point_info_t *ep);
 
-void psci_cpu_on_finish(int cpu_idx, const psci_power_state_t *state_info);
+void psci_cpu_on_finish(unsigned int cpu_idx, const psci_power_state_t *state_info);
 
 /* Private exported functions from psci_off.c */
 int psci_do_cpu_off(unsigned int end_pwrlvl);
@@ -311,7 +317,7 @@ void psci_cpu_suspend_start(const entry_point_info_t *ep,
 			psci_power_state_t *state_info,
 			unsigned int is_power_down_state);
 
-void psci_cpu_suspend_finish(int cpu_idx, const psci_power_state_t *state_info);
+void psci_cpu_suspend_finish(unsigned int cpu_idx, const psci_power_state_t *state_info);
 
 /* Private exported functions from psci_helpers.S */
 void psci_do_pwrdown_cache_maintenance(unsigned int pwr_level);
