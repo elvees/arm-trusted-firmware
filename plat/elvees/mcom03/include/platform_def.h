@@ -53,7 +53,7 @@
 #define PLAT_PHY_ADDR_SPACE_SIZE	(ULL(1) << 40)
 #define PLAT_VIRT_ADDR_SPACE_SIZE	(ULL(1) << 39)
 
-#define MAX_MMAP_REGIONS		8
+#define MAX_MMAP_REGIONS		16
 #define MAX_XLAT_TABLES			8
 
 /*
