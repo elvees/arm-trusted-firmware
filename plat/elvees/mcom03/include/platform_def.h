@@ -39,7 +39,7 @@
 #define PLAT_LOCAL_STATE_OFF		U(2)
 
 /* Size of cacheable stacks */
-#define PLATFORM_STACK_SIZE		UL(0x400)
+#define PLATFORM_STACK_SIZE		UL(0x1000)
 
 /*
  * Some data must be aligned on the biggest cache line size in the platform.
