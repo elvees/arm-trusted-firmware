@@ -25,7 +25,7 @@ void mcom03_mmap_setup(uintptr_t total_base, size_t total_size,
 		       const struct mmap_region *mmap)
 {
 	VERBOSE("Trusted RAM seen by this BL image: %p - %p\n",
-		(void *)total_base, (void *)(total_base + total_size));
+		(void *)total_base, (void *)(total_base + total_size - 1UL));
 	mmap_add_region(total_base, total_base, total_size,
 			MT_RW_DATA | MT_SECURE);
 
