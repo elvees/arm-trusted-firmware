@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 RnD Center "ELVEES", JSC
+ * Copyright 2019-2022 RnD Center "ELVEES", JSC
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -57,7 +57,7 @@ endfunc plat_is_my_cpu_primary
 func plat_crash_console_init
 	mov_imm x0, PLAT_BOOT_UART_BASE
 	mov_imm x1, PLAT_BOOT_UART_CLK_IN_HZ
-	mov_imm x2, PLAT_CONSOLE_BAUDRATE
+	mov_imm x2, PLAT_BOOT_CONSOLE_BAUDRATE
 	b	console_16550_core_init
 endfunc plat_crash_console_init
 

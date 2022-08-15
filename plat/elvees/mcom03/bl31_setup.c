@@ -58,7 +58,7 @@ void bl31_early_platform_setup2(u_register_t arg0, u_register_t arg1,
 	/* Initialize the console to provide early debug support */
 	console_16550_register(PLAT_BOOT_UART_BASE,
 			       PLAT_BOOT_UART_CLK_IN_HZ,
-			       PLAT_CONSOLE_BAUDRATE, &console);
+			       PLAT_BOOT_CONSOLE_BAUDRATE, &console);
 
 	console_set_scope(&console, CONSOLE_FLAG_BOOT |
 			  CONSOLE_FLAG_RUNTIME);
