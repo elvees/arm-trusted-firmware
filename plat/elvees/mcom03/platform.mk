@@ -1,5 +1,5 @@
 #
-# Copyright 2019 RnD Center "ELVEES", JSC
+# Copyright 2019-2022 RnD Center "ELVEES", JSC
 #
 # SPDX-License-Identifier: BSD-3-Clause
 #
@@ -15,6 +15,7 @@ ENABLE_SPM			:= 0
 
 # Enable workarounds for selected Cortex-A53 erratas.
 ERRATA_A53_855873		:= 1
+ERRATA_A53_1530924		:= 1
 
 # Libraries
 include lib/xlat_tables_v2/xlat_tables.mk
