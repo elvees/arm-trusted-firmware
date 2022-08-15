@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 RnD Center "ELVEES", JSC
+ * Copyright 2019-2022 RnD Center "ELVEES", JSC
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -15,7 +15,7 @@
 #include <drivers/ti/uart/uart_16550.h>
 #include <drivers/generic_delay_timer.h>
 
-#include <mcom03.h>
+#include <plat_private.h>
 
 static console_t console;
 static entry_point_info_t bl33_image_ep_info;

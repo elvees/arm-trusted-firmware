@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 RnD Center "ELVEES", JSC
+ * Copyright 2019-2022 RnD Center "ELVEES", JSC
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -8,7 +8,7 @@
 
 #include <arch.h>
 
-#include <mcom03.h>
+#include <plat_private.h>
 
 unsigned char plat_tree_desc[PLAT_CLUSTER_COUNT + 1];
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 RnD Center "ELVEES", JSC
+ * Copyright 2019-2022 RnD Center "ELVEES", JSC
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -14,7 +14,7 @@
 #include <drivers/delay_timer.h>
 #include <lib/psci/psci.h>
 
-#include <mcom03.h>
+#include <plat_private.h>
 
 uintptr_t plat_sec_entrypoint;
 

@@ -1,11 +1,11 @@
 /*
- * Copyright 2019 RnD Center "ELVEES", JSC
+ * Copyright 2019-2022 RnD Center "ELVEES", JSC
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#ifndef MCOM03_H
-#define MCOM03_H
+#ifndef PLAT_PRIVATE_H
+#define PLAT_PRIVATE_H
 
 #include <stdint.h>
 #include <cdefs.h>
@@ -15,11 +15,11 @@
 #include <lib/xlat_tables/xlat_tables_v2.h>
 #include <lib/mmio.h>
 
-#define CPU_PPOLICY_REG(core) (PLAT_URB_BASE + (core) * 16)
-#define CPU_PSTATUS_REG(core) (PLAT_URB_BASE + (core) * 16 + 4)
+#define CPU_PPOLICY_REG(core)	(PLAT_URB_BASE + (core) * 16U)
+#define CPU_PSTATUS_REG(core)	(PLAT_URB_BASE + (core) * 16U + 4U)
 
-#define SYS_PPOLICY_REG CPU_PPOLICY_REG(PLATFORM_CORE_COUNT)
-#define SYS_PSTATUS_REG CPU_PSTATUS_REG(PLATFORM_CORE_COUNT)
+#define SYS_PPOLICY_REG	CPU_PPOLICY_REG(PLATFORM_CORE_COUNT)
+#define SYS_PSTATUS_REG	CPU_PSTATUS_REG(PLATFORM_CORE_COUNT)
 
 #define CPU_PPOLICY_SET(core, val) \
 	mmio_write_32(CPU_PPOLICY_REG(core), val)
@@ -32,8 +32,10 @@
 
 #define SYS_PPOLICY_SET(val) \
 	mmio_write_32(SYS_PPOLICY_REG, val)
+
 #define SYS_PPOLICY_GET() \
 	mmio_read_32(SYS_PPOLICY_REG)
+
 #define SYS_PSTATUS_GET() \
 	mmio_read_32(SYS_PSTATUS_REG)
 
@@ -44,6 +46,6 @@ void mcom03_gic_cpuif_disable(void);
 void mcom03_gic_pcpu_init(void);
 
 void mcom03_mmap_setup(uintptr_t total_base, size_t total_size,
-		       const struct mmap_region *mmap);
+			const struct mmap_region *mmap);
 
-#endif /* MCOM03_H */
+#endif /* PLAT_PRIVATE_H */

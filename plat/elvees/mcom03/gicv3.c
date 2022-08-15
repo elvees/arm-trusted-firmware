@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 RnD Center "ELVEES", JSC
+ * Copyright 2019-2022 RnD Center "ELVEES", JSC
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -12,7 +12,7 @@
 #include <drivers/arm/gicv3.h>
 #include <plat/common/platform.h>
 
-#include <mcom03.h>
+#include <plat_private.h>
 
 static uintptr_t rdistif_base_addrs[PLATFORM_CORE_COUNT];
 
