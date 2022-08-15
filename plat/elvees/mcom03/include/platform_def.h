@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 RnD Center "ELVEES", JSC
+ * Copyright 2019-2022 RnD Center "ELVEES", JSC
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -56,6 +56,19 @@
 
 #define PLAT_GICD_BASE			0x1100000
 #define PLAT_GICR_BASE			0x1180000
+
+#define PLAT_IRQ_SEC_PHY_TIMER		29
+
+#define PLAT_IRQ_SEC_SGI_0		8
+#define PLAT_IRQ_SEC_SGI_1		9
+#define PLAT_IRQ_SEC_SGI_2		10
+#define PLAT_IRQ_SEC_SGI_3		11
+#define PLAT_IRQ_SEC_SGI_4		12
+#define PLAT_IRQ_SEC_SGI_5		13
+#define PLAT_IRQ_SEC_SGI_6		14
+#define PLAT_IRQ_SEC_SGI_7		15
+
+#define MAX_INTR_EL3			159
 
 #define PLAT_URB_BASE			0x1000000
 
