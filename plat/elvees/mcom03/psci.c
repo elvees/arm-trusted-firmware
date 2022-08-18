@@ -20,18 +20,18 @@ uintptr_t plat_sec_entrypoint;
 
 static int pwr_domain_on(u_register_t mpidr)
 {
-	int cpu = plat_core_pos_by_mpidr(mpidr);
+	int core = plat_core_pos_by_mpidr(mpidr);
 
-	if (cpu < 0)
+	if (core < 0)
 		return PSCI_E_NOT_PRESENT;
 
-	/* power UP selected core */
-	CPU_PPOLICY_SET(cpu, PPOLICY_ON);
+	/* Power UP selected core */
+	CPU_PPOLICY_SET(core, PPOLICY_ON);
 	mdelay(10);
 
-	/* check status */
-	if (!(CPU_PSTATUS_GET(cpu) & PPOLICY_ON))
-		return PSCI_E_NOT_PRESENT;
+	/* Check status */
+	if (!(CPU_PSTATUS_GET(core) & PPOLICY_ON))
+		return PSCI_E_INTERN_FAIL;
 
 	return PSCI_E_SUCCESS;
 }
@@ -52,6 +52,7 @@ static void cpu_standby(plat_local_state_t cpu_state)
 	assert(cpu_state == PLAT_LOCAL_STATE_RET);
 
 	scr = read_scr_el3();
+
 	/* Enable PhysicalIRQ bit for NS world to wake the CPU */
 	write_scr_el3(scr | SCR_IRQ_BIT);
 	isb();
@@ -61,7 +62,10 @@ static void cpu_standby(plat_local_state_t cpu_state)
 	write_scr_el3(scr);
 }
 
-/* optional ?? */
+/*
+ * Export the platform handlers via plat_psci_ops. The ARM Standard
+ * platform will take care of registering the handlers with PSCI.
+ */
 const plat_psci_ops_t plat_psci_ops = {
 	.pwr_domain_on		= pwr_domain_on,
 	.pwr_domain_on_finish	= pwr_domain_on_finish,
@@ -75,6 +79,12 @@ int plat_setup_psci_ops(uintptr_t sec_entrypoint,
 	flush_dcache_range((uint64_t)&plat_sec_entrypoint,
 			   sizeof(plat_sec_entrypoint));
 
+	VERBOSE("%s: sec_entrypoint=0x%lx\n", __func__,
+		(unsigned long)plat_sec_entrypoint);
+
+	/*
+	 * Initialize PSCI ops struct
+	 */
 	*psci_ops = &plat_psci_ops;
 
 	return 0;
