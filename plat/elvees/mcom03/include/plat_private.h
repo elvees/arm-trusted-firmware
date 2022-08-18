@@ -61,6 +61,6 @@ void mcom03_gic_cpuif_disable(void);
 void mcom03_gic_pcpu_init(void);
 
 void mcom03_mmap_setup(uintptr_t total_base, size_t total_size,
-			const struct mmap_region *mmap);
+		       const struct mmap_region *mmap);
 
 #endif /* PLAT_PRIVATE_H */
