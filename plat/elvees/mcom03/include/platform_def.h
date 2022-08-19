@@ -121,4 +121,24 @@
 #define PPOLICY_WARM_RST		0x8
 #define PPOLICY_ON			0x10
 
+/*
+ * TSP  specific defines.
+ */
+#define TSP_SEC_MEM_BASE		BL32_BASE
+#define TSP_SEC_MEM_SIZE		BL32_SIZE
+
+/* ID of the secure physical generic timer interrupt used by the TSP */
+#define TSP_IRQ_SEC_PHY_TIMER		29U
+
+/* UART related constants */
+#ifdef PLAT_MCOM03_HAPS
+#define PLAT_TSP_UART_BASE		0x1750000
+#define PLAT_TSP_UART_CLK_IN_HZ		14750000
+#define PLAT_TSP_CONSOLE_BAUDRATE	115200
+#else
+#define PLAT_TSP_UART_BASE		0x1750000
+#define PLAT_TSP_UART_CLK_IN_HZ		27000000
+#define PLAT_TSP_CONSOLE_BAUDRATE	115200
+#endif
+
 #endif /* PLATFORM_DEF_H */
