@@ -17,7 +17,11 @@
 #define PLATFORM_CORE_COUNT		(PLAT_CLUSTER_COUNT * \
 					 PLAT_MAX_CORES_PER_CLUSTER)
 
+#define MCOM03_PRIMARY_CORE		U(0)
+
 #define PLAT_MAX_PWR_LVL		(MPIDR_AFFLVL1)
+#define PLAT_NUM_PWR_DOMAINS		(PLAT_CLUSTER_COUNT + \
+					 PLATFORM_CORE_COUNT)
 
 /*
  * This macro defines the deepest retention state possible. A higher state

@@ -25,6 +25,11 @@ static int pwr_domain_on(u_register_t mpidr)
 	if (core < 0)
 		return PSCI_E_NOT_PRESENT;
 
+	/* Insert reset vectors for current core */
+	CPU_RVBADDR_SET(core, plat_sec_entrypoint);
+	isb();
+	dsb();
+
 	/* Power UP selected core */
 	CPU_PPOLICY_SET(core, PPOLICY_ON);
 	mdelay(10);
@@ -62,14 +67,45 @@ static void cpu_standby(plat_local_state_t cpu_state)
 	write_scr_el3(scr);
 }
 
+static void pwr_domain_off(const psci_power_state_t *target_state)
+{
+	/* Disable the gic cpu interface */
+	mcom03_gic_cpuif_disable();
+}
+
+static void __dead2 pwr_domain_pwr_down_wfi(const psci_power_state_t
+					     *target_state)
+{
+	u_register_t mpidr = read_mpidr_el1();
+	unsigned int core = plat_core_pos_by_mpidr(mpidr);
+
+	dsbsy();
+
+	isb();
+	dsb();
+
+	/* Power DOWN selected core */
+	/* Switching the cores to WARM_RESET mode because switching to POWER_OFF
+	 * mode requires a resident module in the trusted RISC0 subsystem to
+	 * control the powering of the cores and to set the entry point into
+	 * the software. In POWER_OFF mode there is no possibility to do
+	 * this from the ARM subsystem. */
+	CPU_PPOLICY_SET(core, PPOLICY_WARM_RST);
+
+	for (;;)
+		wfi();
+}
+
 /*
  * Export the platform handlers via plat_psci_ops. The ARM Standard
  * platform will take care of registering the handlers with PSCI.
  */
 const plat_psci_ops_t plat_psci_ops = {
-	.pwr_domain_on		= pwr_domain_on,
-	.pwr_domain_on_finish	= pwr_domain_on_finish,
-	.cpu_standby		= cpu_standby,
+	.pwr_domain_on			= pwr_domain_on,
+	.pwr_domain_on_finish		= pwr_domain_on_finish,
+	.cpu_standby			= cpu_standby,
+	.pwr_domain_off			= pwr_domain_off,
+	.pwr_domain_pwr_down_wfi	= pwr_domain_pwr_down_wfi,
 };
 
 int plat_setup_psci_ops(uintptr_t sec_entrypoint,

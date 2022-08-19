@@ -18,6 +18,21 @@
 #define CPU_PPOLICY_REG(core)	(PLAT_URB_BASE + (core) * 16U)
 #define CPU_PSTATUS_REG(core)	(PLAT_URB_BASE + (core) * 16U + 4U)
 
+#define CPU_RVBADDR_OFFSET		(0x0118U)
+#define CPU_RVBADDR_HI(core) \
+	(PLAT_URB_BASE + CPU_RVBADDR_OFFSET + (core) * 8U)
+
+#define CPU_RVBADDR_LO(core) \
+	(PLAT_URB_BASE + CPU_RVBADDR_OFFSET + 4U + (core) * 8U)
+
+#define CPU_RVBADDR_SET(core, entrypoint) \
+	do { \
+		mmio_write_32(CPU_RVBADDR_HI(core), \
+				((uint32_t)((entrypoint) >> 32U))); \
+		mmio_write_32(CPU_RVBADDR_LO(core), \
+				(uint32_t)(entrypoint)); \
+	} while (0)
+
 #define SYS_PPOLICY_REG	CPU_PPOLICY_REG(PLATFORM_CORE_COUNT)
 #define SYS_PSTATUS_REG	CPU_PSTATUS_REG(PLATFORM_CORE_COUNT)
 
