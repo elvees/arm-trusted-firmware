@@ -24,7 +24,7 @@ int plat_core_pos_by_mpidr(u_register_t mpidr)
 	if (cpu_id >= PLAT_MAX_CORES_PER_CLUSTER)
 		return -1;
 
-	return cpu_id;
+	return (cpu_id + (cluster_id * PLAT_MAX_CORES_PER_CLUSTER));
 }
 
 const unsigned char *plat_get_power_domain_tree_desc(void)
