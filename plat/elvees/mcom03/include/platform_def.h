@@ -68,6 +68,13 @@
 #define BL31_LIMIT			(BL31_BASE + BL31_SIZE - 1)
 
 /*
+ * BL3-2 specific defines.
+ */
+#define BL32_BASE			(BL31_BASE + BL31_SIZE)
+#define BL32_SIZE			0x00080000
+#define BL32_LIMIT			(BL32_BASE + BL32_SIZE - 1)
+
+/*
  * BL3-3 specific defines.
  */
 #define BL33_BASE			0x882480000
@@ -95,7 +102,7 @@
 #define PLAT_GICR_BASE			0x1180000
 
 /* SGI, PPI */
-#define PLAT_IRQ_SEC_PHY_TIMER		29
+#define PLAT_IRQ_SEC_PHY_TIMER		29U
 
 #define PLAT_IRQ_SEC_SGI_0		8
 #define PLAT_IRQ_SEC_SGI_1		9
