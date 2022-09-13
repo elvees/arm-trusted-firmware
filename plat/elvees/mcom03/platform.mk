@@ -43,6 +43,10 @@ BL31_SOURCES		+=	${GICV3_SOURCES}	\
 				$(PLAT_PATH)/gicv3.c			\
 				$(PLAT_PATH)/xlat_setup.c
 
+ifneq (${ENABLE_STACK_PROTECTOR}, 0)
+	BL31_SOURCES	+=	$(PLAT_PATH)/mcom03_stack_protector.c
+endif
+
 ifeq (${PLAT_MCOM03_HAPS},1)
 	CFLAGS += -DPLAT_MCOM03_HAPS
 	ASFLAGS += -DPLAT_MCOM03_HAPS

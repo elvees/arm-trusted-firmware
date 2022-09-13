@@ -15,3 +15,8 @@ BL32_SOURCES	+=	$(GICV3_SOURCES)			\
 			plat/elvees/mcom03/psci.c		\
 			plat/elvees/mcom03/topology.c		\
 			plat/elvees/mcom03/xlat_setup.c
+
+ifneq (${ENABLE_STACK_PROTECTOR}, 0)
+	BL32_SOURCES	+=	plat/elvees/mcom03/mcom03_stack_protector.c
+endif
+
