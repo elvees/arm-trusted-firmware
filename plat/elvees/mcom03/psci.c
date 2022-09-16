@@ -93,7 +93,7 @@ void __dead2 system_reset(void)
 	int clk_apb, service_subs_pll;
 
 	service_subs_pll = get_pll_freq(PLAT_SERVICE_SUBS_PLLCFG);
-	clk_apb = get_ucg_freq(PLAT_UCG1_BASE, 0, service_subs_pll);
+	clk_apb = get_ucg_freq(PLAT_SERVICE_SUBS_UCG1, 0, service_subs_pll);
 
 	/* Set timeout to ~2s and enable WDT if it is disabled */
 	if (dw_wdt_is_enabled(PLAT_WDT0_BASE))
