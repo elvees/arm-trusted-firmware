@@ -70,14 +70,14 @@
 /*
  * BL3-2 specific defines.
  */
-#define BL32_BASE			(BL31_BASE + BL31_SIZE)
-#define BL32_SIZE			0x00080000
+#define BL32_BASE			0x881380000
+#define BL32_SIZE			0x00EC80000
 #define BL32_LIMIT			(BL32_BASE + BL32_SIZE - 1)
 
 /*
  * BL3-3 specific defines.
  */
-#define BL33_BASE			0x882480000
+#define BL33_BASE			0x890480000
 
 /* TIMER related constants */
 #ifdef PLAT_MCOM03_HAPS
