@@ -67,6 +67,9 @@
 #define BL31_SIZE			0x00080000
 #define BL31_LIMIT			(BL31_BASE + BL31_SIZE - 1)
 
+#define PLAT_BL31_USER_MEMORY_BASE	0x880000000
+#define PLAT_BL31_USER_MEMORY_SIZE	0x200000
+
 /*
  * BL3-2 specific defines.
  */
@@ -159,5 +162,9 @@
 #define PLAT_TSP_UART_CLK_IN_HZ		27000000
 #define PLAT_TSP_CONSOLE_BAUDRATE	115200
 #endif
+
+/* Mailbox related constants */
+#define PLAT_MAILBOX_BASE		0x1EFD0000
+#define PLAT_MAILBOX_FIFO_NUMBER	4U
 
 #endif /* PLATFORM_DEF_H */

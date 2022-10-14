@@ -57,6 +57,12 @@ void mcom03_mmap_setup(uintptr_t total_base, size_t total_size,
 			URB_REGION_SIZE,
 			MT_DEVICE | MT_RW | MT_SECURE);
 
+	/* Map secure DDR for shared mem */
+	mmap_add_region(PLAT_BL31_USER_MEMORY_BASE, PLAT_BL31_USER_MEMORY_BASE,
+			PLAT_BL31_USER_MEMORY_SIZE,
+			MT_NON_CACHEABLE | MT_RW | MT_SECURE);
+
+
 	/* additional regions if needed */
 	if (mmap)
 		mmap_add(mmap);
