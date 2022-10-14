@@ -37,6 +37,7 @@ BL31_SOURCES		+=	${GICV3_SOURCES}	\
 				lib/cpus/aarch64/cortex_a53.S		\
 				plat/common/plat_gicv3.c		\
 				plat/common/plat_psci_common.c		\
+				$(PLAT_PATH)/drivers/mailbox/mailbox.c \
 				$(PLAT_PATH)/bl31_setup.c		\
 				$(PLAT_PATH)/topology.c			\
 				$(PLAT_PATH)/psci.c			\
