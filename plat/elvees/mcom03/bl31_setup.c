@@ -14,7 +14,7 @@
 #include <lib/xlat_tables/xlat_tables_v2.h>
 #include <drivers/ti/uart/uart_16550.h>
 #include <drivers/generic_delay_timer.h>
-
+#include <tl_services/client/tl_services_api.h>
 #include <plat_private.h>
 
 static console_t console;
@@ -128,6 +128,7 @@ void bl31_platform_setup(void)
 
 void bl31_plat_runtime_setup(void)
 {
+	tl_services_start();
 }
 
 void bl31_plat_arch_setup(void)
