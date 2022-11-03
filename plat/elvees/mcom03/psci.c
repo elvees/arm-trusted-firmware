@@ -92,6 +92,9 @@ void __dead2 system_reset(void)
 {
 	int clk_apb, service_subs_pll;
 
+	/* Prevent waking up this cpu from wfi */
+	mcom03_gic_cpuif_disable();
+
 	service_subs_pll = get_pll_freq(PLAT_SERVICE_SUBS_PLLCFG);
 	clk_apb = get_ucg_freq(PLAT_SERVICE_SUBS_UCG1, 0, service_subs_pll);
 
