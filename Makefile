@@ -414,6 +414,8 @@ endif
 
 GCC_V_OUTPUT		:=	$(shell $(CC) -v 2>&1)
 
+TF_LDFLAGS		+=	-z noexecstack
+
 # LD = armlink
 ifneq ($(findstring armlink,$(notdir $(LD))),)
 TF_LDFLAGS		+=	--diag_error=warning --lto_level=O1
@@ -440,7 +442,10 @@ TF_LDFLAGS		+=	$(subst --,-Xlinker --,$(TF_LDFLAGS_$(ARCH)))
 
 # LD = gcc-ld (ld) or llvm-ld (ld.lld) or other
 else
-TF_LDFLAGS		+=	--fatal-warnings -O1
+# With ld.bfd version 2.39 and newer new warnings are added. Skip those since we
+# are not loaded by a elf loader.
+TF_LDFLAGS		+=	$(call ld_option, --no-warn-rwx-segments)
+TF_LDFLAGS		+=	-O1
 TF_LDFLAGS		+=	--gc-sections
 # ld.lld doesn't recognize the errata flags,
 # therefore don't add those in that case
