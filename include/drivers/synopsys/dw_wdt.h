@@ -28,7 +28,10 @@
 #define DW_WDT_ICR			BIT_32(0)
 
 bool dw_wdt_is_enabled(uintptr_t base);
-void dw_wdt_start(uintptr_t base, uint32_t ticks);
-void dw_wdt_refresh(uintptr_t base, uint32_t ticks);
-
+void dw_wdt_reset(uintptr_t base);
+void dw_wdt_start(uintptr_t base, uint32_t timeout_sec, uint32_t ticks_per_sec);
+void dw_wdt_set_timeout(uintptr_t base, uint32_t timeout_sec, uint32_t ticks_per_sec);
+uint32_t dw_wdt_get_timeout(uintptr_t base, uint32_t ticks_per_sec);
+uint32_t dw_wdt_get_max_timeout(uintptr_t base, uint32_t ticks_per_sec);
+uint32_t dw_wdt_get_min_timeout(uintptr_t base, uint32_t ticks_per_sec);
 #endif /* DW_WDT_H */

@@ -98,11 +98,8 @@ void __dead2 system_reset(void)
 	service_subs_pll = get_pll_freq(PLAT_SERVICE_SUBS_PLLCFG);
 	clk_apb = get_ucg_freq(PLAT_SERVICE_SUBS_UCG1, 0, service_subs_pll);
 
-	/* Set timeout to ~2s and enable WDT if it is disabled */
-	if (dw_wdt_is_enabled(PLAT_WDT0_BASE))
-		dw_wdt_refresh(PLAT_WDT0_BASE, clk_apb * 2);
-	else
-		dw_wdt_start(PLAT_WDT0_BASE, clk_apb * 2);
+	/* Start WDT with ~2s timeout */
+	dw_wdt_start(PLAT_WDT0_BASE, 2, clk_apb);
 
 	/* wait for reset to assert... */
 	mdelay(500);
