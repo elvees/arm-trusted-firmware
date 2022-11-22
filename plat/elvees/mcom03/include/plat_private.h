@@ -63,4 +63,6 @@ void mcom03_gic_pcpu_init(void);
 void mcom03_mmap_setup(uintptr_t total_base, size_t total_size,
 		       const struct mmap_region *mmap);
 
+int mcom03_get_apb_clk(void);
+
 #endif /* PLAT_PRIVATE_H */

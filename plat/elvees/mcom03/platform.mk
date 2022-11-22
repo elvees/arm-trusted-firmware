@@ -43,6 +43,7 @@ BL31_SOURCES		+=	${GICV3_SOURCES}	\
 				$(PLAT_PATH)/topology.c			\
 				$(PLAT_PATH)/psci.c			\
 				$(PLAT_PATH)/gicv3.c			\
+				$(PLAT_PATH)/clk.c			\
 				$(PLAT_PATH)/xlat_setup.c
 
 ifneq (${ENABLE_STACK_PROTECTOR}, 0)
