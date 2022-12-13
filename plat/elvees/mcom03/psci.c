@@ -72,13 +72,13 @@ void __dead2 system_reset(void)
 			panic();
 		}
 	} else {
-		/* Prevent waking up this cpu from wfi */
-		mcom03_gic_cpuif_disable();
-
 		clk_apb = mcom03_get_apb_clk();
 
 		dw_wdt_start(PLAT_WDT0_BASE, RESET_TIMEOUT, clk_apb);
 	}
+
+	/* Prevent waking up this cpu from wfi */
+	mcom03_gic_cpuif_disable();
 
 	/* wait for reset to assert... */
 	mdelay(500);
