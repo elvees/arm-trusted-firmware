@@ -133,7 +133,7 @@ int risc0_ipc_send(const risc0_ipc_cmd_t *cmd,
 		if (ret)
 			goto exit;
 
-		ret = risc0_ipc_wait_for_resp(resp, 100U);
+		ret = risc0_ipc_wait_for_resp(resp, 1000U);
 		if (ret)
 			goto exit;
 	}

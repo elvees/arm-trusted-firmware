@@ -18,6 +18,7 @@ typedef enum {
 	RISC0_IPC_INIT = 0x00U,
 	RISC0_IPC_RESERVED = 0x01U,
 	RISC0_IPC_WDT = 0x02U,
+	RISC0_IPC_PM = 0x04U,
 	RISC0_IPC_DDR_SUBS = 0x05U,
 	RISC0_IPC_COUNT,
 } risc0_ipc;
@@ -37,6 +38,13 @@ typedef enum {
 	RISC0_IPC_WDT_FUNC_GET_MIN_TIMEOUT_S = 0x07U,
 	RISC0_IPC_WDT_FUNC_COUNT,
 } risc0_ipc_wdt_func;
+
+typedef enum {
+	RISC0_IPC_PM_FUNC_CHECK_SUPPORT = 0x01U,
+	RISC0_IPC_PM_FUNC_ENABLE = 0x02U,
+	RISC0_IPC_PM_FUNC_DISABLE = 0x03U,
+	RISC0_IPC_PM_FUNC_COUNT,
+} risc0_ipc_pm_func;
 
 typedef enum {
 	RISC0_IPC_DDR_SUBS_FUNC_SET_HSPERIPH_BAR = 0x01U,
@@ -67,6 +75,10 @@ typedef struct {
 } risc0_ipc_wdt_set_timeout_t;
 
 typedef struct {
+	uint32_t id;
+} risc0_ipc_pm_toggle_t;
+
+typedef struct {
 	uint32_t value;
 } risc0_ipc_ddr_subs_set_bar_t;
 
@@ -76,6 +88,9 @@ typedef union {
 		risc0_ipc_wdt_start_t start;
 		risc0_ipc_wdt_set_timeout_t setTimeout;
 	} wdt;
+	union {
+		risc0_ipc_pm_toggle_t toggle;
+	} pm;
 	union {
 		risc0_ipc_ddr_subs_set_bar_t bar;
 	} ddr_subs;
@@ -102,6 +117,10 @@ typedef struct {
 	uint32_t value;
 } risc0_ipc_wdt_get_min_timeout_t;
 
+typedef struct {
+	uint32_t value;
+} risc0_ipc_pm_resp_t;
+
 typedef union {
 	union {
 		risc0_ipc_init_get_capability_t capability;
@@ -112,6 +131,9 @@ typedef union {
 		risc0_ipc_wdt_get_max_timeout_t minTimeout;
 		risc0_ipc_wdt_get_min_timeout_t maxTimeout;
 	} wdt;
+	union {
+		risc0_ipc_pm_resp_t response;
+	} pm;
 } risc0_ipc_resp_param_t;
 
 /* Command message */
