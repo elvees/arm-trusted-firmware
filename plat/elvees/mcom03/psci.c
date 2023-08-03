@@ -16,6 +16,7 @@
 #include <drivers/synopsys/dw_wdt.h>
 #include <lib/psci/psci.h>
 
+#include <plat_sip_svc.h>
 #include <plat_private.h>
 
 #define RESET_TIMEOUT 2U
@@ -133,6 +134,23 @@ static void __dead2 pwr_domain_pwr_down_wfi(const psci_power_state_t
 		wfi();
 }
 
+static void __dead2 system_off(void)
+{
+	uint64_t wdt_max_timeout;
+
+	INFO("MCom-03 System Off\n");
+
+	wdt_max_timeout = mcom03_sip_wdt_handler(MCOM03_SIP_WDT_GET_MAX_TIMEOUT_S, 0, 0, 0);
+	mcom03_sip_wdt_handler(MCOM03_SIP_WDT_SET_TIMEOUT_S, wdt_max_timeout, 0, 0);
+	mcom03_gic_cpuif_disable();
+
+	while (1) {
+		// Reset watchdog every 0.8 * max_timeout seconds to avoid occasional reboots
+		mcom03_sip_wdt_handler(MCOM03_SIP_WDT_PING, 0, 0, 0);
+		mdelay(wdt_max_timeout * 800);
+	}
+}
+
 /*
  * Export the platform handlers via plat_psci_ops. The ARM Standard
  * platform will take care of registering the handlers with PSCI.
@@ -144,6 +162,7 @@ const plat_psci_ops_t plat_psci_ops = {
 	.pwr_domain_off			= pwr_domain_off,
 	.pwr_domain_pwr_down_wfi	= pwr_domain_pwr_down_wfi,
 	.system_reset			= system_reset,
+	.system_off			= system_off,
 };
 
 int plat_setup_psci_ops(uintptr_t sec_entrypoint,
