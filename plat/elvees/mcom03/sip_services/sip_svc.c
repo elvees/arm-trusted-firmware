@@ -30,6 +30,8 @@ uintptr_t mcom03_sip_handler(uint32_t smc_fid,
 	switch (smc_fid) {
 	case MCOM03_SIP_WDT:
 		SMC_RET1(handle, mcom03_sip_wdt_handler(x1, x2, x3, x4));
+	case MCOM03_SIP_DDR_SUBS:
+		SMC_RET1(handle, mcom03_sip_ddr_subs_handler(x1, x2, x3, x4));
 	default:
 		ERROR("%s: unhandled SMC (0x%x)\n", __func__, smc_fid);
 		SMC_RET1(handle, SMC_UNK);

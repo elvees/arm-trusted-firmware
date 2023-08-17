@@ -29,7 +29,16 @@
 #define MCOM03_SIP_WDT_GET_MAX_TIMEOUT_S	0x06
 #define MCOM03_SIP_WDT_GET_MIN_TIMEOUT_S	0x07
 
+#define MCOM03_SIP_DDR_SUBS			0xC2000004
+#define MCOM03_SIP_DDR_SUBS_SET_HSPERIPH_BAR	0x01
+#define MCOM03_SIP_DDR_SUBS_SET_LSPERIPH0_BAR	0x02
+#define MCOM03_SIP_DDR_SUBS_SET_LSPERIPH1_BAR	0x03
+#define MCOM03_SIP_DDR_SUBS_SET_GPU_BAR		0x04
+
 uint64_t mcom03_sip_wdt_handler(uint64_t id, uint64_t param,
 				uint64_t arg0, uint64_t arg1);
+
+uint64_t mcom03_sip_ddr_subs_handler(uint64_t id, uint64_t param,
+				     uint64_t arg0, uint64_t arg1);
 
 #endif /* PLAT_SIP_SVC_H */

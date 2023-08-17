@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2022 RnD Center "ELVEES", JSC
+ * Copyright 2019-2023 RnD Center "ELVEES", JSC
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -18,6 +18,7 @@ typedef enum {
 	TL_MBOX_SERVICES_INIT = 0x00U,
 	TL_MBOX_SERVICES_TL_PROTO = 0x01U,
 	TL_MBOX_SERVICES_WDT = 0x02U,
+	TL_MBOX_SERVICES_DDR_SUBS = 0x05U,
 	TL_MBOX_SERVICES_COUNT,
 } TL_MBOX_SERVICES_t;
 
@@ -44,6 +45,14 @@ typedef enum {
 } TL_MBOX_SERVICES_WDT_FUNC_t;
 
 typedef enum {
+	TL_MBOX_SERVICES_DDR_SUBS_FUNC_SET_HSPERIPH_BAR = 0x01U,
+	TL_MBOX_SERVICES_DDR_SUBS_FUNC_SET_LSPERIPH0_BAR = 0x02U,
+	TL_MBOX_SERVICES_DDR_SUBS_FUNC_SET_LSPERIPH1_BAR = 0x03U,
+	TL_MBOX_SERVICES_DDR_SUBS_FUNC_SET_GPU_BAR = 0x04U,
+	TL_MBOX_SERVICES_DDR_SUBS_FUNC_COUNT,
+} TL_MBOX_SERVICES_DDR_SUBS_FUNC_t;
+
+typedef enum {
 	TL_MBOX_SERVICES_RESP_STATE_BUSY = 0x00U,
 	TL_MBOX_SERVICES_RESP_STATE_COMPLETE = 0x01U,
 	TL_MBOX_SERVICES_RESP_STATE_COUNT,
@@ -63,6 +72,10 @@ typedef struct {
 	uint32_t value;
 } TL_MBOX_SERVICES_WDT_set_timeout_t;
 
+typedef struct {
+	uint32_t value;
+} TL_MBOX_SERVICES_DDR_SUBS_set_bar_t;
+
 typedef union {
 	union {
 		TL_MBOX_SERVICES_TL_PROTO_start_t start;
@@ -71,6 +84,9 @@ typedef union {
 		TL_MBOX_SERVICES_WDT_start_t start;
 		TL_MBOX_SERVICES_WDT_set_timeout_t setTimeout;
 	} wdt;
+	union {
+		TL_MBOX_SERVICES_DDR_SUBS_set_bar_t bar;
+	} ddr_subs;
 } TL_MBOX_SERVICES_cmd_param_t;
 
 /* Response params */
