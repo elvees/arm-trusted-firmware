@@ -40,7 +40,7 @@ BL31_SOURCES		+=	${GICV3_SOURCES}	\
 				$(PLAT_PATH)/drivers/mailbox/mailbox.c \
 				$(PLAT_PATH)/tl_services/client/tl_services_api.c \
 				${PLAT_PATH}/sip_services/sip_svc.c \
-				${PLAT_PATH}/sip_services/wdt/wdt_sip_svc.c \
+				${PLAT_PATH}/sip_services/wdt_sip_svc.c \
 				$(PLAT_PATH)/bl31_setup.c		\
 				$(PLAT_PATH)/topology.c			\
 				$(PLAT_PATH)/psci.c			\
