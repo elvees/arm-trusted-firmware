@@ -13,7 +13,6 @@
 #include <common/debug.h>
 #include <drivers/delay_timer.h>
 #include <tl_services/client/tl_services_api.h>
-#include <drivers/synopsys/dw_wdt.h>
 #include <lib/psci/psci.h>
 
 #include <plat_sip_svc.h>
@@ -57,26 +56,7 @@ static void pwr_domain_on_finish(const psci_power_state_t *target_state)
 
 void __dead2 system_reset(void)
 {
-	int ret;
-	int clk_apb;
-
-	if (tl_services_get_capability() & BIT(TL_MBOX_SERVICES_WDT)) {
-		TL_MBOX_SERVICES_cmd_t cmd = {
-			.hdr.service = TL_MBOX_SERVICES_WDT,
-			.hdr.func = TL_MBOX_SERVICES_WDT_FUNC_SET_TIMEOUT_S,
-			.param.wdt.setTimeout.value = RESET_TIMEOUT,
-		};
-
-		ret = tl_services_send(&cmd, NULL);
-		if (ret) {
-			ERROR("%s: Failed to send message to mailbox, ret=%d\r\n", __func__, ret);
-			panic();
-		}
-	} else {
-		clk_apb = mcom03_get_apb_clk();
-
-		dw_wdt_start(PLAT_WDT0_BASE, RESET_TIMEOUT, clk_apb);
-	}
+	mcom03_sip_wdt_handler(MCOM03_SIP_WDT_START, RESET_TIMEOUT, 0, 0);
 
 	/* Prevent waking up this cpu from wfi */
 	mcom03_gic_cpuif_disable();
