@@ -14,6 +14,17 @@
 
 #include <tl_services/tl_services.h>
 
+#define DEFINE_TL_SERVICES_SEND(service) \
+	static inline void service##_service_send(const TL_MBOX_SERVICES_cmd_t *cmd, \
+						  TL_MBOX_SERVICES_resp_t *resp) \
+	{ \
+		int err = tl_services_send(cmd, resp); \
+		if (err) { \
+			ERROR("%s failed to send msg, err = %d\r\n", __func__, err); \
+			panic(); \
+		} \
+	}
+
 #pragma pack(push, 1)
 typedef struct {
 	uint32_t magic_num;

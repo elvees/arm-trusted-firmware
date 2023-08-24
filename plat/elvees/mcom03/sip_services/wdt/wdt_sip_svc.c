@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2022 RnD Center "ELVEES", JSC
+ * Copyright 2019-2023 RnD Center "ELVEES", JSC
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -16,17 +16,7 @@
 #include <tl_services/client/tl_services_api.h>
 #include <drivers/synopsys/dw_wdt.h>
 
-/*
- * This function is blocked waiting for response if shrmem is provided.
- */
-#define wdt_services_send(cmd, resp) \
-	do { \
-		int err = tl_services_send((cmd), (resp)); \
-		if (err) { \
-			ERROR("%s: WDT Service failed to send msg, err = %d\r\n", __func__, err); \
-			panic(); \
-		} \
-	} while (0)
+DEFINE_TL_SERVICES_SEND(wdt);
 
 static TL_MBOX_SERVICES_cmd_t cmd = { .hdr.service = TL_MBOX_SERVICES_WDT };
 
@@ -38,7 +28,7 @@ static uint64_t mcom03_sip_wdt_is_enable(unsigned int core, uint32_t param)
 	if (tl_services_get_capability() & BIT(TL_MBOX_SERVICES_WDT)) {
 		resp = tl_services_alloc_resp_buffer(core);
 		cmd.hdr.func = TL_MBOX_SERVICES_WDT_FUNC_IS_ENABLE;
-		wdt_services_send(&cmd, resp);
+		wdt_service_send(&cmd, resp);
 		ret = resp->param.wdt.isEnable.value;
 		tl_services_free_resp_buffer(resp);
 	} else {
@@ -55,7 +45,7 @@ static void mcom03_sip_wdt_start(unsigned int core, uint32_t param)
 	if (tl_services_get_capability() & BIT(TL_MBOX_SERVICES_WDT)) {
 		cmd.hdr.func = TL_MBOX_SERVICES_WDT_FUNC_START;
 		cmd.param.wdt.start.timeout = param;
-		wdt_services_send(&cmd, NULL);
+		wdt_service_send(&cmd, NULL);
 	} else {
 		clk_apb = mcom03_get_apb_clk();
 		dw_wdt_start(PLAT_WDT0_BASE, param, clk_apb);
@@ -66,7 +56,7 @@ static void mcom03_sip_wdt_ping(unsigned int core, uint32_t param)
 {
 	if (tl_services_get_capability() & BIT(TL_MBOX_SERVICES_WDT)) {
 		cmd.hdr.func = TL_MBOX_SERVICES_WDT_FUNC_PING;
-		wdt_services_send(&cmd, NULL);
+		wdt_service_send(&cmd, NULL);
 	} else {
 		dw_wdt_reset(PLAT_WDT0_BASE);
 	}
@@ -79,7 +69,7 @@ static void mcom03_sip_wdt_set_timeout(unsigned int core, uint32_t param)
 	if (tl_services_get_capability() & BIT(TL_MBOX_SERVICES_WDT)) {
 		cmd.hdr.func = TL_MBOX_SERVICES_WDT_FUNC_SET_TIMEOUT_S;
 		cmd.param.wdt.setTimeout.value = param;
-		wdt_services_send(&cmd, NULL);
+		wdt_service_send(&cmd, NULL);
 	} else {
 		clk_apb = mcom03_get_apb_clk();
 		dw_wdt_set_timeout(PLAT_WDT0_BASE, param, clk_apb);
@@ -95,7 +85,7 @@ static uint64_t mcom03_sip_wdt_get_timeout(unsigned int core, uint32_t param)
 	if (tl_services_get_capability() & BIT(TL_MBOX_SERVICES_WDT)) {
 		resp = tl_services_alloc_resp_buffer(core);
 		cmd.hdr.func = TL_MBOX_SERVICES_WDT_FUNC_GET_TIMEOUT_S;
-		wdt_services_send(&cmd, resp);
+		wdt_service_send(&cmd, resp);
 		ret = resp->param.wdt.timeout.value;
 		tl_services_free_resp_buffer(resp);
 	} else {
@@ -115,7 +105,7 @@ static uint64_t mcom03_sip_wdt_get_max_timeout(unsigned int core, uint32_t param
 	if (tl_services_get_capability() & BIT(TL_MBOX_SERVICES_WDT)) {
 		resp = tl_services_alloc_resp_buffer(core);
 		cmd.hdr.func = TL_MBOX_SERVICES_WDT_FUNC_GET_MAX_TIMEOUT_S;
-		wdt_services_send(&cmd, resp);
+		wdt_service_send(&cmd, resp);
 		ret = resp->param.wdt.maxTimeout.value;
 		tl_services_free_resp_buffer(resp);
 	} else {
@@ -135,7 +125,7 @@ static uint64_t mcom03_sip_wdt_get_min_timeout(unsigned int core, uint32_t param
 	if (tl_services_get_capability() & BIT(TL_MBOX_SERVICES_WDT)) {
 		resp = tl_services_alloc_resp_buffer(core);
 		cmd.hdr.func = TL_MBOX_SERVICES_WDT_FUNC_GET_MIN_TIMEOUT_S;
-		wdt_services_send(&cmd, resp);
+		wdt_service_send(&cmd, resp);
 		ret = resp->param.wdt.minTimeout.value;
 		tl_services_free_resp_buffer(resp);
 	} else {
