@@ -41,4 +41,3 @@ uint32_t tl_services_get_capability(void);
 int tl_services_stop(void);
 
 #endif /* __TL_SERVICES_API_H__ */
-

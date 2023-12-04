@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, ARM Limited and Contributors. All rights reserved.
+ * Copyright 2019-2022 RnD Center "ELVEES", JSC
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -19,4 +19,3 @@ u_register_t plat_get_stack_protector_canary(void)
 	 */
 	return RANDOM_CANARY_VALUE ^ (u_register_t)read_cntpct_el0();
 }
-

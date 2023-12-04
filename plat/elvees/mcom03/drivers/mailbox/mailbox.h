@@ -99,4 +99,3 @@ void mailbox_message_end(void);
 int mailbox_notify(uint32_t fifo_num);
 
 #endif /* __MAILBOX_H__ */
-
