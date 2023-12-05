@@ -26,7 +26,6 @@ uintptr_t mcom03_sip_handler(uint32_t smc_fid,
 			     void *handle,
 			     u_register_t flags)
 {
-
 	switch (smc_fid) {
 	case MCOM03_SIP_WDT:
 		SMC_RET1(handle, mcom03_sip_wdt_handler(x1, x2, x3, x4));
@@ -57,18 +56,27 @@ uintptr_t mcom03_smc_handler(uint32_t smc_fid,
 	if (!ns)
 		SMC_RET1(handle, SMC_UNK);
 
-	switch (smc_fid) {
-	case MCOM03_SIP_SVC_CALL_COUNT:
-		/* Return the number of MCom-03 SiP Service Calls. */
-		SMC_RET1(handle, MCOM03_COMMON_SIP_NUM_CALLS);
-	case MCOM03_SIP_SVC_UID:
-		/* Return UID to the caller */
-		SMC_UUID_RET(handle, mcom03_sip_svc_uid);
-	case MCOM03_SIP_SVC_VERSION:
-		/* Return the version of current implementation */
-		SMC_RET2(handle, MCOM03_SIP_SVC_VERSION_MAJOR,
-			 MCOM03_SIP_SVC_VERSION_MINOR);
-	default:
+	if (GET_SMC_CC(smc_fid) == SMC_32) {
+		x1 = (uint32_t) x1;
+		x2 = (uint32_t) x2;
+		x3 = (uint32_t) x3;
+		x4 = (uint32_t) x4;
+
+		switch (smc_fid) {
+		case MCOM03_SIP_SVC_CALL_COUNT:
+			/* Return the number of MCom-03 SiP Service Calls. */
+			SMC_RET1(handle, MCOM03_COMMON_SIP_NUM_CALLS);
+		case MCOM03_SIP_SVC_UID:
+			/* Return UID to the caller */
+			SMC_UUID_RET(handle, mcom03_sip_svc_uid);
+		case MCOM03_SIP_SVC_VERSION:
+			/* Return the version of current implementation */
+			SMC_RET2(handle, MCOM03_SIP_SVC_VERSION_MAJOR,
+				 MCOM03_SIP_SVC_VERSION_MINOR);
+		default:
+			SMC_RET1(handle, SMC_UNK);
+		}
+	} else {
 		return mcom03_sip_handler(smc_fid, x1, x2, x3, x4,
 					  cookie, handle, flags);
 	}

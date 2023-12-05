@@ -8,9 +8,9 @@
 #define PLAT_SIP_SVC_H
 
 /* SMC function IDs for SiP Service queries */
-#define MCOM03_SIP_SVC_CALL_COUNT		0xC200FF00
-#define MCOM03_SIP_SVC_UID			0xC200FF01
-#define MCOM03_SIP_SVC_VERSION			0xC200FF03
+#define MCOM03_SIP_SVC_CALL_COUNT		0x8200FF00
+#define MCOM03_SIP_SVC_UID			0x8200FF01
+#define MCOM03_SIP_SVC_VERSION			0x8200FF03
 
 /* MCom-03 SiP Service Calls version numbers */
 #define MCOM03_SIP_SVC_VERSION_MAJOR		0x0
