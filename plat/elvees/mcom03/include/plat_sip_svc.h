@@ -14,10 +14,10 @@
 
 /* MCom-03 SiP Service Calls version numbers */
 #define MCOM03_SIP_SVC_VERSION_MAJOR		0x0
-#define MCOM03_SIP_SVC_VERSION_MINOR		0x1
+#define MCOM03_SIP_SVC_VERSION_MINOR		0x2
 
 /* Number of MCom-03 SiP Calls implemented */
-#define MCOM03_COMMON_SIP_NUM_CALLS		1
+#define MCOM03_COMMON_SIP_NUM_CALLS		2
 
 /* MCom-03 WDT SiP Service queries */
 #define MCOM03_SIP_WDT				0xC2000001
