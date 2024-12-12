@@ -12,7 +12,7 @@
 #include <arch_helpers.h>
 #include <common/debug.h>
 #include <drivers/delay_timer.h>
-#include <tl_services/client/tl_services_api.h>
+#include <risc0_ipc/client/api.h>
 #include <lib/psci/psci.h>
 
 #include <plat_sip_svc.h>

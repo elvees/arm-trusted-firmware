@@ -13,24 +13,24 @@
 #include <plat_private.h>
 #include <arch_helpers.h>
 
-#include <tl_services/client/tl_services_api.h>
+#include <risc0_ipc/client/api.h>
 #include <drivers/synopsys/dw_wdt.h>
 
-DEFINE_TL_SERVICES_SEND(wdt);
+DEFINE_RISC0_IPC_SEND(wdt);
 
-static TL_MBOX_SERVICES_cmd_t cmd = { .hdr.service = TL_MBOX_SERVICES_WDT };
+static risc0_ipc_cmd_t cmd = { .hdr.service = RISC0_IPC_WDT };
 
 static uint64_t mcom03_sip_wdt_is_enable(unsigned int core, uint32_t param)
 {
 	uint64_t ret;
-	TL_MBOX_SERVICES_resp_t *resp;
+	risc0_ipc_resp_t *resp;
 
-	if (tl_services_get_capability() & BIT(TL_MBOX_SERVICES_WDT)) {
-		resp = tl_services_alloc_resp_buffer(core);
-		cmd.hdr.func = TL_MBOX_SERVICES_WDT_FUNC_IS_ENABLE;
+	if (risc0_ipc_get_capability() & BIT(RISC0_IPC_WDT)) {
+		resp = risc0_ipc_alloc_resp_buffer(core);
+		cmd.hdr.func = RISC0_IPC_WDT_FUNC_IS_ENABLE;
 		wdt_service_send(&cmd, resp);
 		ret = resp->param.wdt.isEnable.value;
-		tl_services_free_resp_buffer(resp);
+		risc0_ipc_free_resp_buffer(resp);
 	} else {
 		ret = dw_wdt_is_enabled(PLAT_WDT0_BASE);
 	}
@@ -42,8 +42,8 @@ static void mcom03_sip_wdt_start(unsigned int core, uint32_t param)
 {
 	int clk_apb;
 
-	if (tl_services_get_capability() & BIT(TL_MBOX_SERVICES_WDT)) {
-		cmd.hdr.func = TL_MBOX_SERVICES_WDT_FUNC_START;
+	if (risc0_ipc_get_capability() & BIT(RISC0_IPC_WDT)) {
+		cmd.hdr.func = RISC0_IPC_WDT_FUNC_START;
 		cmd.param.wdt.start.timeout = param;
 		wdt_service_send(&cmd, NULL);
 	} else {
@@ -54,8 +54,8 @@ static void mcom03_sip_wdt_start(unsigned int core, uint32_t param)
 
 static void mcom03_sip_wdt_ping(unsigned int core, uint32_t param)
 {
-	if (tl_services_get_capability() & BIT(TL_MBOX_SERVICES_WDT)) {
-		cmd.hdr.func = TL_MBOX_SERVICES_WDT_FUNC_PING;
+	if (risc0_ipc_get_capability() & BIT(RISC0_IPC_WDT)) {
+		cmd.hdr.func = RISC0_IPC_WDT_FUNC_PING;
 		wdt_service_send(&cmd, NULL);
 	} else {
 		dw_wdt_reset(PLAT_WDT0_BASE);
@@ -66,8 +66,8 @@ static void mcom03_sip_wdt_set_timeout(unsigned int core, uint32_t param)
 {
 	int clk_apb;
 
-	if (tl_services_get_capability() & BIT(TL_MBOX_SERVICES_WDT)) {
-		cmd.hdr.func = TL_MBOX_SERVICES_WDT_FUNC_SET_TIMEOUT_S;
+	if (risc0_ipc_get_capability() & BIT(RISC0_IPC_WDT)) {
+		cmd.hdr.func = RISC0_IPC_WDT_FUNC_SET_TIMEOUT_S;
 		cmd.param.wdt.setTimeout.value = param;
 		wdt_service_send(&cmd, NULL);
 	} else {
@@ -80,14 +80,14 @@ static uint64_t mcom03_sip_wdt_get_timeout(unsigned int core, uint32_t param)
 {
 	uint64_t ret;
 	int clk_apb;
-	TL_MBOX_SERVICES_resp_t *resp;
+	risc0_ipc_resp_t *resp;
 
-	if (tl_services_get_capability() & BIT(TL_MBOX_SERVICES_WDT)) {
-		resp = tl_services_alloc_resp_buffer(core);
-		cmd.hdr.func = TL_MBOX_SERVICES_WDT_FUNC_GET_TIMEOUT_S;
+	if (risc0_ipc_get_capability() & BIT(RISC0_IPC_WDT)) {
+		resp = risc0_ipc_alloc_resp_buffer(core);
+		cmd.hdr.func = RISC0_IPC_WDT_FUNC_GET_TIMEOUT_S;
 		wdt_service_send(&cmd, resp);
 		ret = resp->param.wdt.timeout.value;
-		tl_services_free_resp_buffer(resp);
+		risc0_ipc_free_resp_buffer(resp);
 	} else {
 		clk_apb = mcom03_get_apb_clk();
 		ret = dw_wdt_get_timeout(PLAT_WDT0_BASE, clk_apb);
@@ -100,14 +100,14 @@ static uint64_t mcom03_sip_wdt_get_max_timeout(unsigned int core, uint32_t param
 {
 	uint64_t ret;
 	int clk_apb;
-	TL_MBOX_SERVICES_resp_t *resp;
+	risc0_ipc_resp_t *resp;
 
-	if (tl_services_get_capability() & BIT(TL_MBOX_SERVICES_WDT)) {
-		resp = tl_services_alloc_resp_buffer(core);
-		cmd.hdr.func = TL_MBOX_SERVICES_WDT_FUNC_GET_MAX_TIMEOUT_S;
+	if (risc0_ipc_get_capability() & BIT(RISC0_IPC_WDT)) {
+		resp = risc0_ipc_alloc_resp_buffer(core);
+		cmd.hdr.func = RISC0_IPC_WDT_FUNC_GET_MAX_TIMEOUT_S;
 		wdt_service_send(&cmd, resp);
 		ret = resp->param.wdt.maxTimeout.value;
-		tl_services_free_resp_buffer(resp);
+		risc0_ipc_free_resp_buffer(resp);
 	} else {
 		clk_apb = mcom03_get_apb_clk();
 		ret = dw_wdt_get_max_timeout(PLAT_WDT0_BASE, clk_apb);
@@ -120,14 +120,14 @@ static uint64_t mcom03_sip_wdt_get_min_timeout(unsigned int core, uint32_t param
 {
 	uint64_t ret;
 	int clk_apb;
-	TL_MBOX_SERVICES_resp_t *resp;
+	risc0_ipc_resp_t *resp;
 
-	if (tl_services_get_capability() & BIT(TL_MBOX_SERVICES_WDT)) {
-		resp = tl_services_alloc_resp_buffer(core);
-		cmd.hdr.func = TL_MBOX_SERVICES_WDT_FUNC_GET_MIN_TIMEOUT_S;
+	if (risc0_ipc_get_capability() & BIT(RISC0_IPC_WDT)) {
+		resp = risc0_ipc_alloc_resp_buffer(core);
+		cmd.hdr.func = RISC0_IPC_WDT_FUNC_GET_MIN_TIMEOUT_S;
 		wdt_service_send(&cmd, resp);
 		ret = resp->param.wdt.minTimeout.value;
-		tl_services_free_resp_buffer(resp);
+		risc0_ipc_free_resp_buffer(resp);
 	} else {
 		clk_apb = mcom03_get_apb_clk();
 		ret = dw_wdt_get_min_timeout(PLAT_WDT0_BASE, clk_apb);

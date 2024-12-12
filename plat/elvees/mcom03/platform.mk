@@ -38,7 +38,7 @@ BL31_SOURCES		+=	${GICV3_SOURCES}	\
 				plat/common/plat_gicv3.c		\
 				plat/common/plat_psci_common.c		\
 				$(PLAT_PATH)/drivers/mailbox/mailbox.c \
-				$(PLAT_PATH)/tl_services/client/tl_services_api.c \
+				$(PLAT_PATH)/risc0_ipc/client/api.c \
 				${PLAT_PATH}/sip_services/ddr_subs_sip_svc.c \
 				${PLAT_PATH}/sip_services/sip_svc.c \
 				${PLAT_PATH}/sip_services/wdt_sip_svc.c \

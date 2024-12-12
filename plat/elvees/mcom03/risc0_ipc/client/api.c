@@ -16,20 +16,20 @@
 #include <drivers/delay_timer.h>
 #include <drivers/mailbox/mailbox.h>
 
-#include "tl_services_api.h"
+#include "api.h"
 
-CASSERT((sizeof(tl_services_hdr_t) % sizeof(uint32_t)) == 0U,
-	tl_services_hdr_t_is_not_aligned);
-CASSERT((sizeof(TL_MBOX_SERVICES_cmd_t) % sizeof(uint32_t)) == 0U,
-	TL_MBOX_SERVICES_cmd_t_is_not_aligned);
-CASSERT((sizeof(TL_MBOX_SERVICES_resp_t) % sizeof(uint32_t)) == 0U,
-	TL_MBOX_SERVICES_resp_t_is_not_aligned);
+CASSERT((sizeof(risc0_ipc_hdr_t) % sizeof(uint32_t)) == 0U,
+	risc0_ipc_hdr_t_is_not_aligned);
+CASSERT((sizeof(risc0_ipc_cmd_t) % sizeof(uint32_t)) == 0U,
+	risc0_ipc_cmd_t_is_not_aligned);
+CASSERT((sizeof(risc0_ipc_resp_t) % sizeof(uint32_t)) == 0U,
+	risc0_ipc_resp_t_is_not_aligned);
 
 static uint32_t capability;
 
-static TL_MBOX_SERVICES_resp_t __section(".sharedmem") responses[PLATFORM_CORE_COUNT] = {0};
+static risc0_ipc_resp_t __section(".sharedmem") responses[PLATFORM_CORE_COUNT] = {0};
 
-static int tl_services_wait_for_resp(const TL_MBOX_SERVICES_resp_t *resp, uint32_t timeout)
+static int risc0_ipc_wait_for_resp(const risc0_ipc_resp_t *resp, uint32_t timeout)
 {
 	uint64_t expire;
 
@@ -40,7 +40,7 @@ static int tl_services_wait_for_resp(const TL_MBOX_SERVICES_resp_t *resp, uint32
 		expire = timeout_init_us(timeout * 1000U);
 
 	/* Wait until the response message would be written */
-	while (resp->state.value != TL_MBOX_SERVICES_RESP_STATE_COMPLETE) {
+	while (resp->state.value != RISC0_IPC_RESP_STATE_COMPLETE) {
 		dmbsy();
 		if (timeout)
 			if (timeout_elapsed(expire))
@@ -50,7 +50,7 @@ static int tl_services_wait_for_resp(const TL_MBOX_SERVICES_resp_t *resp, uint32
 	return 0;
 }
 
-static int tl_services_message_write(const uint8_t *data, uint32_t size)
+static int risc0_ipc_message_write(const uint8_t *data, uint32_t size)
 {
 	int count = 0;
 
@@ -62,7 +62,7 @@ static int tl_services_message_write(const uint8_t *data, uint32_t size)
 	return 0;
 }
 
-int tl_services_start(void)
+int risc0_ipc_start(void)
 {
 	int ret;
 	u_register_t mpidr = read_mpidr_el1();
@@ -70,13 +70,13 @@ int tl_services_start(void)
 
 	mailbox_init((void *)PLAT_MAILBOX_BASE);
 
-	TL_MBOX_SERVICES_cmd_t cmd = {
-		.hdr.service = TL_MBOX_SERVICES_INIT,
-		.hdr.func = TL_MBOX_SERVICES_INIT_FUNC_GET_CAPABILITY,
+	risc0_ipc_cmd_t cmd = {
+		.hdr.service = RISC0_IPC_INIT,
+		.hdr.func = RISC0_IPC_INIT_FUNC_GET_CAPABILITY,
 	};
 
 	capability = 0U;
-	ret = tl_services_send(&cmd, &responses[core]);
+	ret = risc0_ipc_send(&cmd, &responses[core]);
 	if (ret == 0U)
 		capability = responses[core].param.init.capability.value;
 	else
@@ -85,18 +85,18 @@ int tl_services_start(void)
 	return ret;
 }
 
-int tl_services_send(const TL_MBOX_SERVICES_cmd_t *cmd,
-		     TL_MBOX_SERVICES_resp_t *resp)
+int risc0_ipc_send(const risc0_ipc_cmd_t *cmd,
+		   risc0_ipc_resp_t *resp)
 {
 	int ret = 0;
 
-	tl_services_hdr_t hdr = {
-		.magic_num = TL_MBOX_SERVICES_MAGIC,
-		.cmd_len = sizeof(TL_MBOX_SERVICES_cmd_t),
+	risc0_ipc_hdr_t hdr = {
+		.magic_num = RISC0_IPC_MAGIC,
+		.cmd_len = sizeof(risc0_ipc_cmd_t),
 		.shrmem_len = 0,
 	};
 
-	TL_MBOX_SERVICES_shrmem_t shrmem = {
+	risc0_ipc_shrmem_t shrmem = {
 		.data = (uint64_t)resp
 	};
 
@@ -112,7 +112,7 @@ int tl_services_send(const TL_MBOX_SERVICES_cmd_t *cmd,
 		hdr.shrmem_len = sizeof(shrmem);
 
 	dmbsy();
-	ret = tl_services_message_write((const uint8_t *)&hdr, sizeof(hdr));
+	ret = risc0_ipc_message_write((const uint8_t *)&hdr, sizeof(hdr));
 	if (ret)
 		goto exit;
 
@@ -121,19 +121,19 @@ int tl_services_send(const TL_MBOX_SERVICES_cmd_t *cmd,
 	if (ret)
 		goto exit;
 
-	ret = tl_services_message_write((const uint8_t *)cmd, sizeof(*cmd));
+	ret = risc0_ipc_message_write((const uint8_t *)cmd, sizeof(*cmd));
 	if (ret)
 		goto exit;
 
 	if (resp != NULL) {
-		memset((void *)shrmem.data, 0U, sizeof(TL_MBOX_SERVICES_resp_t));
+		memset((void *)shrmem.data, 0U, sizeof(risc0_ipc_resp_t));
 
 		dmbsy();
-		ret = tl_services_message_write((const uint8_t *)&shrmem, sizeof(shrmem));
+		ret = risc0_ipc_message_write((const uint8_t *)&shrmem, sizeof(shrmem));
 		if (ret)
 			goto exit;
 
-		ret = tl_services_wait_for_resp(resp, 100U);
+		ret = risc0_ipc_wait_for_resp(resp, 100U);
 		if (ret)
 			goto exit;
 	}
@@ -144,22 +144,22 @@ exit:
 	return ret;
 }
 
-TL_MBOX_SERVICES_resp_t *tl_services_alloc_resp_buffer(unsigned int core)
+risc0_ipc_resp_t *risc0_ipc_alloc_resp_buffer(unsigned int core)
 {
-	return (TL_MBOX_SERVICES_resp_t *)&responses[core];
+	return (risc0_ipc_resp_t *)&responses[core];
 }
 
-int tl_services_free_resp_buffer(TL_MBOX_SERVICES_resp_t *resp)
+int risc0_ipc_free_resp_buffer(risc0_ipc_resp_t *resp)
 {
 	return 0;
 }
 
-uint32_t tl_services_get_capability(void)
+uint32_t risc0_ipc_get_capability(void)
 {
 	return capability;
 }
 
-int tl_services_stop(void)
+int risc0_ipc_stop(void)
 {
 	return 0;
 }
