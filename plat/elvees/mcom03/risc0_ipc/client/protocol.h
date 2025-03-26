@@ -20,6 +20,7 @@ typedef enum {
 	RISC0_IPC_WDT = 0x02U,
 	RISC0_IPC_PM = 0x04U,
 	RISC0_IPC_DDR_SUBS = 0x05U,
+	RISC0_IPC_BOOTSTAGE = 0x06U,
 	RISC0_IPC_COUNT,
 } risc0_ipc;
 
@@ -55,6 +56,12 @@ typedef enum {
 } risc0_ipc_ddr_subs_func;
 
 typedef enum {
+	RISC0_IPC_BOOTSTAGE_FUNC_SET_STAGE = 0x01U,
+	RISC0_IPC_BOOTSTAGE_FUNC_GET_TIMESTAMP = 0x02U,
+	RISC0_IPC_BOOTSTAGE_FUNC_COUNT,
+} risc0_ipc_bootstage_func;
+
+typedef enum {
 	RISC0_IPC_RESP_STATE_BUSY = 0x00U,
 	RISC0_IPC_RESP_STATE_COMPLETE = 0x01U,
 	RISC0_IPC_RESP_STATE_COUNT,
@@ -82,6 +89,14 @@ typedef struct {
 	uint32_t value;
 } risc0_ipc_ddr_subs_set_bar_t;
 
+typedef struct {
+	uint32_t id;
+} risc0_ipc_bootstage_set_stage_t;
+
+typedef struct {
+	uint32_t id;
+} risc0_ipc_bootstage_get_timestamp_req_t;
+
 typedef union {
 	risc0_ipc_reserved_t reserved;
 	union {
@@ -94,6 +109,10 @@ typedef union {
 	union {
 		risc0_ipc_ddr_subs_set_bar_t bar;
 	} ddr_subs;
+	union {
+		risc0_ipc_bootstage_set_stage_t set_stage;
+		risc0_ipc_bootstage_get_timestamp_req_t get_timestamp;
+	} bootstage;
 } risc0_ipc_cmd_param_t;
 
 /* Response params */
@@ -121,6 +140,10 @@ typedef struct {
 	uint32_t value;
 } risc0_ipc_pm_resp_t;
 
+typedef struct {
+	long long value;
+} risc0_ipc_bootstage_get_timestamp_res_t;
+
 typedef union {
 	union {
 		risc0_ipc_init_get_capability_t capability;
@@ -134,6 +157,9 @@ typedef union {
 	union {
 		risc0_ipc_pm_resp_t response;
 	} pm;
+	union {
+		risc0_ipc_bootstage_get_timestamp_res_t get_timestamp;
+	} bootstage;
 } risc0_ipc_resp_param_t;
 
 /* Command message */

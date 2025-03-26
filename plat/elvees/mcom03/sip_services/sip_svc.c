@@ -11,13 +11,14 @@
 #include <tools_share/uuid.h>
 
 #include <plat_sip_svc.h>
+#include <risc0_ipc/client/api.h>
 
 /* MCom-03 SiP Service UUID */
 DEFINE_SVC_UUID2(mcom03_sip_svc_uid,
 		 0x38d28ea4, 0x5154, 0x11ed, 0xbd, 0xc3,
 		 0x02, 0x42, 0xac, 0x12, 0x00, 0x02);
 
-uintptr_t mcom03_sip_handler(uint32_t smc_fid,
+static uintptr_t mcom03_sip_handler(uint32_t smc_fid,
 			     u_register_t x1,
 			     u_register_t x2,
 			     u_register_t x3,
@@ -33,6 +34,8 @@ uintptr_t mcom03_sip_handler(uint32_t smc_fid,
 		SMC_RET1(handle, mcom03_sip_pm_handler(x1, x2));
 	case MCOM03_SIP_DDR_SUBS:
 		SMC_RET1(handle, mcom03_sip_ddr_subs_handler(x1, x2, x3, x4));
+	case MCOM03_SIP_BOOTSTAGE:
+		SMC_RET1(handle, mcom03_sip_bootstage_handler(x1, x2));
 	default:
 		ERROR("%s: unhandled SMC (0x%x)\n", __func__, smc_fid);
 		SMC_RET1(handle, SMC_UNK);
