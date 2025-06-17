@@ -51,7 +51,7 @@ BL31_SOURCES		+=	${GICV3_SOURCES}	\
 				$(PLAT_PATH)/xlat_setup.c
 
 ifneq (${ENABLE_STACK_PROTECTOR}, 0)
-	BL31_SOURCES	+=	$(PLAT_PATH)/mcom03_stack_protector.c
+BL31_SOURCES		+=	$(PLAT_PATH)/mcom03_stack_protector.c
 endif
 
 $(eval $(call add_define,PLAT_EXTRA_LD_SCRIPT))
