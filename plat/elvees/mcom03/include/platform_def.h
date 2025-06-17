@@ -83,22 +83,12 @@
 #define BL33_BASE			0x890480000
 
 /* TIMER related constants */
-#ifdef PLAT_MCOM03_HAPS
-#define PLAT_TIMER_CLK			5000000
-#else
 #define PLAT_TIMER_CLK			27000000
-#endif
 
 /* UART related constants */
-#ifdef PLAT_MCOM03_HAPS
-#define PLAT_BOOT_UART_BASE		0x1640000
-#define PLAT_BOOT_UART_CLK_IN_HZ	14750000
-#define PLAT_BOOT_CONSOLE_BAUDRATE	115200
-#else
 #define PLAT_BOOT_UART_BASE		0x1750000
 #define PLAT_BOOT_UART_CLK_IN_HZ	27000000
 #define PLAT_BOOT_CONSOLE_BAUDRATE	115200
-#endif
 
 /* Base MCom-03 platform compatible GIC memory map */
 #define PLAT_GICD_BASE			0x1100000
@@ -153,15 +143,9 @@
 #define TSP_IRQ_SEC_PHY_TIMER		29U
 
 /* UART related constants */
-#ifdef PLAT_MCOM03_HAPS
-#define PLAT_TSP_UART_BASE		0x1750000
-#define PLAT_TSP_UART_CLK_IN_HZ		14750000
-#define PLAT_TSP_CONSOLE_BAUDRATE	115200
-#else
 #define PLAT_TSP_UART_BASE		0x1750000
 #define PLAT_TSP_UART_CLK_IN_HZ		27000000
 #define PLAT_TSP_CONSOLE_BAUDRATE	115200
-#endif
 
 /* Mailbox related constants */
 #define PLAT_MAILBOX_BASE		0x1EFD0000
