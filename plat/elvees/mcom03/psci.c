@@ -103,12 +103,7 @@ static void __dead2 pwr_domain_pwr_down_wfi(const psci_power_state_t
 	dsb();
 
 	/* Power DOWN selected core */
-	/* Switching the cores to WARM_RESET mode because switching to POWER_OFF
-	 * mode requires a resident module in the trusted RISC0 subsystem to
-	 * control the powering of the cores and to set the entry point into
-	 * the software. In POWER_OFF mode there is no possibility to do
-	 * this from the ARM subsystem. */
-	CPU_PPOLICY_SET(core, PPOLICY_WARM_RST);
+	CPU_PPOLICY_SET(core, PPOLICY_OFF);
 
 	for (;;)
 		wfi();
