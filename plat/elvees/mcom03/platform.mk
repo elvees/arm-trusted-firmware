@@ -4,6 +4,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
+IMG_ALIGN			?= 16
 RESET_TO_BL31			:= 1
 PROGRAMMABLE_RESET_ADDRESS	:= 1
 USE_COHERENT_MEM		:= 0
@@ -56,3 +57,10 @@ BL31_SOURCES		+=	$(PLAT_PATH)/mcom03_stack_protector.c
 endif
 
 $(eval $(call add_define,PLAT_EXTRA_LD_SCRIPT))
+
+.PHONY: bl31-aligned
+bl31-aligned: ${BUILD_PLAT}/bl31.bin
+	$(ECHO) "  ALIGN      $<"
+	@truncate -s %$(IMG_ALIGN) $<
+
+all: bl31-aligned
