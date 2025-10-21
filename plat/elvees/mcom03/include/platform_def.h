@@ -87,7 +87,7 @@
 
 /* UART related constants */
 #define PLAT_BOOT_UART_BASE		0x1750000
-#define PLAT_BOOT_UART_CLK_IN_HZ	27000000
+#define PLAT_BOOT_UART_CLK_IN_HZ	26706522
 #define PLAT_BOOT_CONSOLE_BAUDRATE	115200
 
 /* Base MCom-03 platform compatible GIC memory map */
@@ -144,7 +144,7 @@
 
 /* UART related constants */
 #define PLAT_TSP_UART_BASE		0x1750000
-#define PLAT_TSP_UART_CLK_IN_HZ		27000000
+#define PLAT_TSP_UART_CLK_IN_HZ		26706522
 #define PLAT_TSP_CONSOLE_BAUDRATE	115200
 
 /* Mailbox related constants */
