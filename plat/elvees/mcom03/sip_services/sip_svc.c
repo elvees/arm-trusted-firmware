@@ -36,10 +36,14 @@ static uintptr_t mcom03_sip_handler(uint32_t smc_fid,
 		SMC_RET1(handle, mcom03_sip_ddr_subs_handler(x1, x2, x3, x4));
 	case MCOM03_SIP_BOOTSTAGE:
 		SMC_RET1(handle, mcom03_sip_bootstage_handler(x1, x2));
+	case MCOM03R_SIP_OTP:
+		SMC_RET1(handle, mcom03r_sip_otp_handler(x1, x2, x3));
 	default:
 		ERROR("%s: unhandled SMC (0x%x)\n", __func__, smc_fid);
-		SMC_RET1(handle, SMC_UNK);
+		break;
 	}
+
+	SMC_RET1(handle, SMC_UNK);
 }
 
 /*

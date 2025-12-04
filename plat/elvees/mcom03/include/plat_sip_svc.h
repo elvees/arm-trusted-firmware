@@ -14,10 +14,10 @@
 
 /* MCom-03 SiP Service Calls version numbers */
 #define MCOM03_SIP_SVC_VERSION_MAJOR		0x0
-#define MCOM03_SIP_SVC_VERSION_MINOR		0x2
+#define MCOM03_SIP_SVC_VERSION_MINOR		0x3
 
 /* Number of MCom-03 SiP Calls implemented */
-#define MCOM03_COMMON_SIP_NUM_CALLS		3
+#define MCOM03_COMMON_SIP_NUM_CALLS		5
 
 /* MCom-03 WDT SiP Service queries */
 #define MCOM03_SIP_WDT				0xC2000001
@@ -44,6 +44,9 @@
 #define MCOM03_SIP_BOOTSTAGE_SET_STAGE		0x01
 #define MCOM03_SIP_BOOTSTAGE_GET_TIMESTAMP	0x02
 
+#define MCOM03R_SIP_OTP				0xC2000006
+#define MCOM03R_SIP_OTP_GET_DUMP		0x01
+
 uint64_t mcom03_sip_wdt_handler(uint64_t id, uint64_t param,
 				uint64_t arg0, uint64_t arg1);
 
@@ -53,5 +56,7 @@ uint64_t mcom03_sip_ddr_subs_handler(uint64_t id, uint64_t param,
 				     uint64_t arg0, uint64_t arg1);
 
 uint64_t mcom03_sip_bootstage_handler(uint64_t id, uint64_t arg0);
+
+uint64_t mcom03r_sip_otp_handler(uint64_t id, uint64_t param0, uint64_t param1);
 
 #endif /* PLAT_SIP_SVC_H */
