@@ -21,6 +21,15 @@
 #define URB_REGION_BASE		PLAT_URB_BASE
 #define URB_REGION_SIZE		0x10000
 
+/* PLAT_MBOX_REGION_BASE = 4th FIFO address */
+#define PLAT_MBOX_REGION_BASE	(PLAT_MAILBOX_BASE + PLAT_MAILBOX_FIFO_OFFSET)
+/* PLAT_MBOX_REGION_SIZE = size of two FIFO's.
+ *
+ * We currently only use 4th FIFO, but in future TEE will use 5th FIFO. Thus
+ * we mark as secure area for 4th and 5th FIFO.
+ */
+#define PLAT_MBOX_REGION_SIZE	(2 * PLAT_MAILBOX_FIFO_SIZE)
+
 void mcom03_mmap_setup(uintptr_t total_base, size_t total_size,
 		       const struct mmap_region *mmap)
 {
@@ -52,6 +61,9 @@ void mcom03_mmap_setup(uintptr_t total_base, size_t total_size,
 
 	mmap_add_region(PLAT_GICR_REGION_BASE, PLAT_GICR_REGION_BASE,
 			PLAT_GICR_REGION_SIZE, MT_DEVICE | MT_RW | MT_SECURE);
+
+	mmap_add_region(PLAT_MBOX_REGION_BASE, PLAT_MBOX_REGION_BASE,
+			PLAT_MBOX_REGION_SIZE, MT_DEVICE | MT_RW | MT_SECURE);
 
 	mmap_add_region(URB_REGION_BASE, URB_REGION_BASE,
 			URB_REGION_SIZE,
