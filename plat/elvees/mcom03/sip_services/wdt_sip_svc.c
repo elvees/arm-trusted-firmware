@@ -40,7 +40,7 @@ static uint64_t mcom03_sip_wdt_is_enable(unsigned int core, uint32_t param)
 
 static void mcom03_sip_wdt_start(unsigned int core, uint32_t param)
 {
-	int clk_apb;
+	uint32_t clk_apb;
 
 	if (risc0_ipc_get_capability() & BIT(RISC0_IPC_WDT)) {
 		cmd.hdr.func = RISC0_IPC_WDT_FUNC_START;
@@ -64,7 +64,7 @@ static void mcom03_sip_wdt_ping(unsigned int core, uint32_t param)
 
 static void mcom03_sip_wdt_set_timeout(unsigned int core, uint32_t param)
 {
-	int clk_apb;
+	uint32_t clk_apb;
 
 	if (risc0_ipc_get_capability() & BIT(RISC0_IPC_WDT)) {
 		cmd.hdr.func = RISC0_IPC_WDT_FUNC_SET_TIMEOUT_S;
@@ -79,7 +79,7 @@ static void mcom03_sip_wdt_set_timeout(unsigned int core, uint32_t param)
 static uint64_t mcom03_sip_wdt_get_timeout(unsigned int core, uint32_t param)
 {
 	uint64_t ret;
-	int clk_apb;
+	uint32_t clk_apb;
 	risc0_ipc_resp_t *resp;
 
 	if (risc0_ipc_get_capability() & BIT(RISC0_IPC_WDT)) {
@@ -99,7 +99,7 @@ static uint64_t mcom03_sip_wdt_get_timeout(unsigned int core, uint32_t param)
 static uint64_t mcom03_sip_wdt_get_max_timeout(unsigned int core, uint32_t param)
 {
 	uint64_t ret;
-	int clk_apb;
+	uint32_t clk_apb;
 	risc0_ipc_resp_t *resp;
 
 	if (risc0_ipc_get_capability() & BIT(RISC0_IPC_WDT)) {
@@ -119,7 +119,7 @@ static uint64_t mcom03_sip_wdt_get_max_timeout(unsigned int core, uint32_t param
 static uint64_t mcom03_sip_wdt_get_min_timeout(unsigned int core, uint32_t param)
 {
 	uint64_t ret;
-	int clk_apb;
+	uint32_t clk_apb;
 	risc0_ipc_resp_t *resp;
 
 	if (risc0_ipc_get_capability() & BIT(RISC0_IPC_WDT)) {

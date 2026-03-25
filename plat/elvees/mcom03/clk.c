@@ -9,7 +9,7 @@
 
 #include <common/debug.h>
 
-static int get_pll_freq(uintptr_t pll_cfg)
+static uint32_t get_pll_freq(uintptr_t pll_cfg)
 {
 	int nr, nf, od;
 	uint32_t pll;
@@ -27,7 +27,7 @@ static int get_pll_freq(uintptr_t pll_cfg)
 		return XTI_CLOCK * ((pll & PLL_CFG_SEL) + 1);
 }
 
-static int get_ucg_freq(uintptr_t ucg_base, int ucg_channel, int parent_rate)
+static uint32_t get_ucg_freq(uintptr_t ucg_base, int ucg_channel, uint32_t parent_rate)
 {
 	int div;
 	uint32_t ctr;
@@ -46,9 +46,9 @@ static int get_ucg_freq(uintptr_t ucg_base, int ucg_channel, int parent_rate)
 		return parent_rate / div;
 }
 
-int mcom03_get_apb_clk(void)
+uint32_t mcom03_get_apb_clk(void)
 {
-	int service_subs_pll;
+	uint32_t service_subs_pll;
 
 	service_subs_pll = get_pll_freq(PLAT_SERVICE_SUBS_PLLCFG);
 
